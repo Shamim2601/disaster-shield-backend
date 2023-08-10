@@ -8,3 +8,119 @@ class Dummy(BaseModel):
     title:str=Field(...,max_length=20)
     class Config:
         orm_mode=True
+
+class User_Base(BaseModel):
+    first_name:str=Field(...,max_length=20,example='John')
+    last_name:str=Field(...,max_length=20,example='Connor')
+    latitude:float|None=Field(None,example=12)
+    longitude:float|None=Field(None,example=12)
+
+class User_Create_Update(User_Base):
+    password:str=Field(...,max_length=20,example='password')
+    pass
+
+class User_Out(User_Base):
+    user_id:int=Field(...,example=1)
+    username:str=Field(...,max_length=20,example='john123')
+
+class User(User_Out):
+    hashed_password:str=Field(...,max_length=100,example='hashed password')
+    class Config:
+        orm_mode=True
+
+class Post_Tag(BaseModel):
+    tag:str=Field(...,max_length=20)
+    post_id:int=Field()
+    
+    class Config:
+        orm_mode=True
+
+class Post_Base(BaseModel):
+    title:str=Field(...,max_length=100)
+    post_content:str|None=Field(None,max_length=1000)
+    volunteers_needed:int|None=Field(None,gt=0)
+    
+class Post_Create_Update(Post_Base):
+    tags:list[Post_Tag]=Field(...)
+    pass
+
+class Post(Post_Create_Update):
+    post_id:int=Field(...)
+    creation_time:int=Field(...)
+    creator_id:int=Field(...)
+    
+    class Config:
+        orm_mode=True
+        
+class Disaster_Type(str,Enum):
+    cyclone="cyclone"
+    earthquake="earthquake"
+    traffic_accident="traffic_accident"
+    flood="flood"
+    fire="fire"
+    
+       
+class Disaster_Base(BaseModel):
+    title:str=Field(...,max_length=100)
+    disaster_type:Disaster_Type
+    description:str|None=Field(None,max_length=1000)
+    latitude:float|None=Field(None,example=12)
+    longitude:float|None=Field(None,example=12)
+    
+class Disaster_Create(Disaster_Base):
+    pass
+
+class Disaster_Update(Disaster_Base):
+    pass
+    
+class Disaster(Disaster_Base):
+    disaster_id:int
+    info_creation_time:int
+    info_creator_id:int
+    
+    class Config:
+        orm_mode=True
+
+class Missing_Person_Status(str,Enum):
+    missing="missing"
+    dead="dead"
+    found="found"
+
+class Gender(str,Enum):
+    male="male"
+    female="female"
+
+class Missing_Person_Base(BaseModel):
+    
+    missing_person_name: str=Field(...,max_length=50)
+    date_of_birth:int|None=Field(None)
+    ethnicity: str|None=Field(None,max_length=20)
+    gender: Gender|None=Field(None)
+    weight_kg: int|None=Field(None,gt=0)
+    height_cm: int|None=Field(None,gt=0)
+    eye_color: str|None=Field(None,max_length=20)
+    last_seen_time: int|None=Field(None)
+    blood_group: str|None=Field(None,max_length=20)
+    status: Missing_Person_Status
+    circumstances: str|None=Field(None,max_length=500)
+    phone:str|None=Field(None,max_length=30)
+    address:str|None=Field(None,max_length=200)
+    identifying_marks:str|None=Field(None,max_length=500)
+    disaster_id: int
+
+    
+        
+class Missing_Person_Create(Missing_Person_Base):
+    pass
+
+class Missing_Person_Update(Missing_Person_Base):
+    pass
+
+class Missing_Person(Missing_Person_Base):
+    missing_person_id: int
+    creator_id: int
+    creation_time: int
+    
+    
+    class Config:
+        orm_mode = True
