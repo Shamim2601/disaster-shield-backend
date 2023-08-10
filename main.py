@@ -165,5 +165,45 @@ async def update_missing(missing_person_id: int, missing: schemas.Missing_Person
     pass
 
 
+# Conversation CRUD
+@app.post('/messages/conversations/', tags=['Messages'], summary="Create a new conversation", response_model=schemas.Conversation)
+async def create_conversation(conversation: schemas.Conversation_Create, db: Session = Depends(get_db)):
+    pass
+
+@app.get('/messages/conversations/', tags=['Messages'], summary="Get a list of conversations", response_model=list[schemas.Conversation])
+async def list_conversations(db: Session = Depends(get_db)):
+    pass
+
+@app.get('/messages/conversations/{conversation_id}', tags=['Messages'], summary="Get conversation by ID", response_model=schemas.Conversation)
+async def read_conversation(conversation_id: int, db: Session = Depends(get_db)):
+    pass
+
+@app.put('/messages/conversations/{conversation_id}', tags=['Messages'], summary="Update conversation by ID", response_model=schemas.Conversation)
+async def update_conversation(conversation_id: int, conversation: schemas.Conversation_Update, db: Session = Depends(get_db)):
+    pass
+
+# Message CRUD
+@app.post('/messages/', tags=['Messages'], summary="Send a new message", response_model=schemas.Message)
+async def send_message(message: schemas.Message_Create, db: Session = Depends(get_db)):
+    pass
+
+@app.put('/messages/{message_id}', tags=['Messages'], summary="Edit a message by ID", response_model=schemas.Message)
+async def edit_message(message_id: int, message: schemas.Message_Update, db: Session = Depends(get_db)):
+    pass
+
+@app.get('/messages/user/{user_id}', tags=['Messages'], summary="Get all messages of a user", response_model=list[schemas.Message])
+async def list_user_messages(user_id: int, db: Session = Depends(get_db)):
+    pass
+
+# Conversation Participants CRUD
+@app.post('/messages/participants/', tags=['Messages'], summary="Add a participant to a conversation", response_model=schemas.Conversation_Participant)
+async def add_participant(participant: schemas.Conversation_Participant, db: Session = Depends(get_db)):
+    pass
+
+@app.get('/messages/participants/conversation/{conversation_id}', tags=['Messages'], summary="Get all participants of a conversation", response_model=list[schemas.Conversation_Participant])
+async def list_conversation_participants(conversation_id: int, db: Session = Depends(get_db)):
+    pass
+
+
 if __name__=="__main__":
     uvicorn.run("main:app",port=4001,reload=True)

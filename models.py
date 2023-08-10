@@ -23,6 +23,10 @@ class User(Base):
     posts=relationship("Post",back_populates="creator")
     added_disasters=relationship("Disaster",back_populates="info_creator")
     missing_persons=relationship("Missing_Person",back_populates="creator")
+    messages=relationship("Message",back_populates="sender")
+    
+    # list of the conversation where the user is participant
+    conversation_participant_list=relationship("Conversation_Participants","participant")
     
 
 class Disaster(Base):
@@ -87,6 +91,33 @@ class Missing_Person(Base):
     creator= relationship("User",back_populates="missing_persons")
     disaster=relationship("Disaster",back_populates="missing_persons")
     
+class Conversation(Base):
+    __tablename__ = "conversations"
+    conversation_id = Column(Integer(), primary_key=True, autoincrement=True)
+    created_at = Column(Integer(), nullable=False)
+    is_group = Column(Boolean(), nullable=False)
+    title = Column(String(100), nullable=False)
+    
+    messages = relationship("Message", back_populates="conversation")
+    participants = relationship("Conversation_Participants", back_populates="conversation")
 
+class Message(Base):
+    __tablename__ = "messages"
+    message_id = Column(Integer(), primary_key=True, autoincrement=True)
+    content = Column(String(500), nullable=False)
+    sender_id = Column(Integer(), ForeignKey("users.user_id"), nullable=False)
+    conversation_id = Column(Integer(), ForeignKey("conversations.conversation_id"), nullable=False)
+    
+    sender = relationship("User",back_populates="messages")  # Assuming you have a User class
+    conversation = relationship("Conversation", back_populates="messages")
+
+class Conversation_Participants(Base):
+    __tablename__ = "conversation_participants"
+    conversation_id = Column(Integer(),ForeignKey("conversations.conversation_id"), primary_key=True)
+    participant_id = Column(Integer(), ForeignKey("users.user_id"),primary_key=True)
+    is_creator = Column(Boolean(), nullable=False)
+    
+    participant = relationship("User","conversation_participant_list")  # Assuming you have a User class
+    conversation = relationship("Conversation", back_populates="participants")
 
     

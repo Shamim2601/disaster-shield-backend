@@ -124,3 +124,49 @@ class Missing_Person(Missing_Person_Base):
     
     class Config:
         orm_mode = True
+
+class Message_Base(BaseModel):
+    content: str = Field(..., max_length=500,description="Content of the message")
+    
+
+class Message_Create(Message_Base):
+    pass
+
+class Message_Update(Message_Base):
+    pass
+
+class Message(Message_Base):
+    message_id: int = Field(..., description="Unique ID of the message")
+    sender_id: int = Field(..., description="ID of the message sender")
+    conversation_id: int = Field(..., description="ID of the conversation")
+    
+    class Config:
+        orm_mode = True 
+ 
+
+class Conversation_Participant(BaseModel):
+    participant_id: int = Field(..., description="Unique ID of the participant entry")
+    conversation_id: int = Field(..., description="ID of the conversation")
+    is_creator:bool
+    class Config:
+        orm_mode = True
+ 
+        
+class Conversation_Base(BaseModel):
+    title: str = Field(..., max_length=100, description="Title of the conversation")
+
+class Conversation_Create(Conversation_Base):
+    is_group: bool = Field(..., description="Whether the conversation is a group conversation")
+    pass
+
+class Conversation_Update(Conversation_Base):
+    pass
+
+class Conversation(Conversation_Create):
+    conversation_id: int = Field(..., description="Unique ID of the conversation")
+    created_at: int = Field(..., description="Timestamp of conversation creation")
+    messages:list[Message]=Field([])
+    participants:list[Conversation_Participant]
+    class Config:
+        orm_mode = True
+
