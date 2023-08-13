@@ -19,6 +19,11 @@ def get_db():
 models.Base.metadata.create_all(bind=engine)
 app = FastAPI()
 
+
+@app.get("/")
+async def hello():
+    return {"msg":"hello"}
+
 # oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 # async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)],db:Session=Depends(get_db)):
