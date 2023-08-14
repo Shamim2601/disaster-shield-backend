@@ -4,4 +4,8 @@ env
 
 __pycache__
 
+# environment setup
 .env
+
+# other files
+test.py

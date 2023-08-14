@@ -9,6 +9,14 @@ class Dummy(BaseModel):
     class Config:
         orm_mode=True
 
+class Access_Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class Access_Token_Data(BaseModel):
+    username :str| None = None
+
 class User_Base(BaseModel):
     first_name:str=Field(...,max_length=20,example='John')
     last_name:str=Field(...,max_length=20,example='Connor')
@@ -34,11 +42,11 @@ class User(User_Out):
     hashed_password:str=Field(...,max_length=100,example='hashed password')
     class Config:
         orm_mode=True
+        
 
 class Post_Tag(BaseModel):
     tag:str=Field(...,max_length=20)
-    post_id:int=Field()
-    
+    post_id:int=Field(...)
     class Config:
         orm_mode=True
 
@@ -46,15 +54,16 @@ class Post_Base(BaseModel):
     title:str=Field(...,max_length=100)
     post_content:str|None=Field(None,max_length=1000)
     volunteers_needed:int|None=Field(None,gt=0)
+    disaster_id:int|None=Field(None)
     
 class Post_Create_Update(Post_Base):
-    tags:list[Post_Tag]=Field(...)
     pass
 
-class Post(Post_Create_Update):
+class Post(Post_Base):
     post_id:int=Field(...)
     creation_time:int=Field(...)
     creator_id:int=Field(...)
+    tags:list[Post_Tag]=Field(...)
     
     class Config:
         orm_mode=True

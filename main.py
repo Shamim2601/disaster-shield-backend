@@ -5,10 +5,22 @@ from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from repository import user_repo
 import uvicorn
+from passlib.context import CryptContext
 
+from dotenv import load_dotenv
+import os
 
 import models, schemas
 from database import SessionLocal, engine
+from datetime import timedelta,datetime
+from jose import JWTError,jwt
+
+
+load_dotenv()
+
+ACCESS_TOKEN_KEY = os.getenv('ACCESS_TOKEN_KEY')
+ACCESS_TOKEN_ALGORITHM = os.getenv('ACCESS_TOKEN_ALGORITHM')
+ACCESS_TOKEN_EXPIRE_MINUTES = 10
 
 def get_db():
     db = SessionLocal()
@@ -20,96 +32,86 @@ def get_db():
 models.Base.metadata.create_all(bind=engine)
 app = FastAPI()
 
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 @app.get("/")
 async def hello():
     return {"msg":"hello"}
 
 
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+# Password Hashing
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
 
-# async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)],db:Session=Depends(get_db)):
-#     user = user_crud.get_user_by_name(db,token)
-#     if not user:
-#         raise HTTPException(
-#             status_code=status.HTTP_401_UNAUTHORIZED,
-#             detail="Invalid authentication credentials",
-#             headers={"WWW-Authenticate": "Bearer"},
-#         )
-#     return user
+def get_password_hash(password):
+    return pwd_context.hash(password)
 
+# Authentication
 
-# @app.post("/users", response_model=schemas.UserOut,tags=['User'])
-# def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-#     db_user = user_crud.get_user_by_name(db,user.name)
-#     if db_user:
-#         raise HTTPException(status_code=400, detail="Username already registered")
-#     return user_crud.create_user(db=db, user=user)
-
-
-# @app.get("/users", response_model=list[schemas.UserOut],tags=['User'])
-# def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-#     users = user_crud.get_users(db, skip=skip, limit=limit)
-#     return users
-
-# @app.get("/users/me",tags=['User'])
-# async def read_users_me(
-#     current_user: Annotated[schemas.UserOut, Depends(get_current_user)]
-# ):
-#     # print(type(current_user))
-#     return current_user
-
-# @app.get("/users/{user_id}", response_model=schemas.UserOut,tags=['User'])
-# def read_user(user_id: int, db: Session = Depends(get_db)):
-#     db_user = user_crud.get_user(db, user_id=user_id)
-#     if db_user is None:
-#         raise HTTPException(status_code=404, detail="User not found")
-#     return db_user
+## Token Creation
+def create_access_token(data: dict, expires_delta: timedelta | None = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, ACCESS_TOKEN_KEY, algorithm=ACCESS_TOKEN_ALGORITHM)
+    return encoded_jwt
 
 
-# @app.post("/login",tags=['Log In'])
-# async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],db:Session=Depends(get_db)):
-#     db_user=user_crud.get_user_by_name(db,form_data.username)
-#     if not db_user:
-#         raise HTTPException(status_code=400, detail="Incorrect username or password")
-#     if not form_data.password==db_user.password:
-#         raise HTTPException(status_code=400, detail="Incorrect username or password")
+# Authentication Routes
+@app.post('/login',tags=['Authentication'],summary='Log In')
+async def login(form_data:Annotated[OAuth2PasswordRequestForm,Depends()],db:Session=Depends(get_db)):
+    user=user_repo.get_user_by_username(db,form_data.username)
+    if not user:
+        raise HTTPException(status_code=400,detail='Incorrect credentials')
+    if not verify_password(form_data.password,user.hashed_password):
+        raise HTTPException(status_code=400,detail='Incorrect credentials')
 
-#     return {"access_token": db_user.name, "token_type": "bearer"}
-
-# @app.post('/missing',tags=['Missing Person'])
-# async def create_missing(missing:schemas.MissingPersonCreate,current_user:
-# Annotated[schemas.UserOut, Depends(get_current_user)],db:Session=Depends(get_db)):
-#     missing:schemas.MissingPerson=missing_crud.create_missing(db,missing,current_user)
-#     return missing
-#     pass
-
-# @app.get('/missing',tags=['Missing Person'])
-# async def get_all_missing(db:Session=Depends(get_db)):
-#     missing_array=missing_crud.get_all_missing(db)
-#     return missing_array
-#     pass
+    access_token_expire=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token=create_access_token({"sub":user.username},expires_delta=access_token_expire)
+    return {"access_token":access_token,"token_type":"bearer"}
+    
 
 
-# @app.put('/missing/{missing_person_id}',tags=['Missing Person'])
-# async def update_missing(missing_person_id:int,missing:schemas.MissingPersonCreate,current_user:
-# Annotated[schemas.UserOut, Depends(get_current_user)],db:Session=Depends(get_db)):
-#     db_missing=missing_crud.get_missing(db,missing_person_id)
-#     if not db_missing:
-#         raise HTTPException(status_code=400, detail="Missing Person does not exist")
-#     if db_missing.added_by_id!=current_user.user_id:
-#         raise HTTPException(status_code=400, detail="Unauthorized")
-#     return missing_crud.update_missing(db,missing_person_id,missing,current_user)
-#     pass
+async def get_current_user(token:Annotated[str,Depends(oauth2_scheme)],db:Session=Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, ACCESS_TOKEN_KEY, algorithms=[ACCESS_TOKEN_ALGORITHM])
+        # apparently "sub" i.e. "subject" is recommended
+        # as a claim than "username" , but not necessary, you can put anything
+        ## claims are statements about an entity (typically, the user)
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        token_data = schemas.Access_Token_Data(username=username)
+    except JWTError:
+        raise credentials_exception
+    user=user_repo.get_user_by_username(db,token_data.username)
+    if not user:
+        raise credentials_exception
+    return user
+
+
 
 
 # User CRUD
+@app.get('/users/me',tags=['Users'],summary='Get Current User',response_model=schemas.User_Out)
+async def send_current_user(current_user:Annotated[schemas.User,Depends(get_current_user)]):
+    return current_user
+
 @app.post('/users/', tags=['Users'], summary="Create a new user", response_model=schemas.User_Out)
 async def create_user(user: schemas.User_Create, db: Session = Depends(get_db)):
     db_user=user_repo.get_user_by_username(db,user.username)
     if db_user:
         raise HTTPException(status_code=400,detail='username is taken')
-    hashed_password=user.password
+    hashed_password=get_password_hash(user.password)
     is_admin=False
     db_user=models.User(**user.dict(exclude=['password']),hashed_password=hashed_password,is_admin=is_admin)
     return user_repo.create_user(db,db_user)
@@ -120,19 +122,26 @@ async def list_users(db: Session = Depends(get_db)):
 
 @app.get('/users/{user_id}', tags=['Users'], summary="Get user by ID", response_model=schemas.User_Out)
 async def read_user(user_id: int, db: Session = Depends(get_db)):
-    # user=user_repo.get_user_by_id(db,user_id)
-    # if not user:
-    #     raise HTTPException(status_code=404,detail='user not found')
-    # return user
+    user=user_repo.get_user_by_id(db,user_id)
+    if not user:
+        raise HTTPException(status_code=404,detail='user not found')
+    return user
     pass
 
 @app.put('/users/{user_id}', tags=['Users'], summary="Update user by ID", response_model=schemas.User_Out)
 async def update_user(user_id: int, user: schemas.User_Update, db: Session = Depends(get_db)):
-    pass
+    db_user=user_repo.get_user_by_id(db,user_id)
+    if not db_user:
+        raise HTTPException(status_code=404,detail='user not found')
+    hashed_password=get_password_hash(user.password)
+    return user_repo.update_user(db,user_id,hashed_password,user)
 
 # Post CRUD
 @app.post('/posts/', tags=['Posts'], summary="Create a new post", response_model=schemas.Post)
-async def create_post(post: schemas.Post_Create_Update, db: Session = Depends(get_db)):
+async def create_post(post: schemas.Post_Create_Update,user:Annotated[models.User,Depends(get_current_user)], \
+    db: Session = Depends(get_db)):
+    #db_post=models.Post(**post.dict(),creator_id=user.user_id,creation_time=0,post_id=1)
+    #return db_post
     pass
 
 @app.get('/posts/', tags=['Posts'], summary="Get a list of posts", response_model=list[schemas.Post])
@@ -221,6 +230,13 @@ async def add_participant(participant: schemas.Conversation_Participant, db: Ses
 async def list_conversation_participants(conversation_id: int, db: Session = Depends(get_db)):
     pass
 
+# @app.post('/post_test')
+# async def post_test(post:schemas.Post_Create_Update,db:Session=Depends(get_db)):
+#     return user_repo.add_post(db,post)
+
+# @app.get('/all_posts_test')
+# async def post_all(db:Session=Depends(get_db)):
+#     return user_repo.get_all_posts(db)
 
 if __name__=="__main__":
     uvicorn.run("main:app",port=4001,reload=True)

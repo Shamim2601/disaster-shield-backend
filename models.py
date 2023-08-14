@@ -53,9 +53,8 @@ class Post(Base):
     volunteers_needed=Column(Integer(),nullable=True)
     creator_id=Column(Integer(),ForeignKey("users.user_id"),nullable=False)
     disaster_id=Column(Integer(),ForeignKey("disasters.disaster_id"),nullable=True)
-    
     creator= relationship("User",back_populates="posts")
-    tags=relationship("Post_Tag",back_populates="post")
+    tags=relationship("Post_Tag",back_populates="post",lazy=False)
     disaster=relationship("Disaster",back_populates="posts")
     
     
