@@ -26,7 +26,7 @@ class User(Base):
     messages=relationship("Message",back_populates="sender")
     
     # list of the conversation where the user is participant
-    conversation_participant_list=relationship("Conversation_Participants","participant")
+    conversation_participant_list=relationship("Conversation_Participant",back_populates="participant")
     
 
 class Disaster(Base):
@@ -99,7 +99,7 @@ class Conversation(Base):
     title = Column(String(100), nullable=False)
     
     messages = relationship("Message", back_populates="conversation")
-    participants = relationship("Conversation_Participants", back_populates="conversation")
+    participants = relationship("Conversation_Participant", back_populates="conversation")
 
 class Message(Base):
     __tablename__ = "messages"
@@ -111,13 +111,13 @@ class Message(Base):
     sender = relationship("User",back_populates="messages")  # Assuming you have a User class
     conversation = relationship("Conversation", back_populates="messages")
 
-class Conversation_Participants(Base):
+class Conversation_Participant(Base):
     __tablename__ = "conversation_participants"
     conversation_id = Column(Integer(),ForeignKey("conversations.conversation_id"), primary_key=True)
     participant_id = Column(Integer(), ForeignKey("users.user_id"),primary_key=True)
     is_creator = Column(Boolean(), nullable=False)
     
-    participant = relationship("User","conversation_participant_list")  # Assuming you have a User class
+    participant = relationship("User",back_populates="conversation_participant_list")  # Assuming you have a User class
     conversation = relationship("Conversation", back_populates="participants")
 
     

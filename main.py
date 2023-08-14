@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException,status
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from repository import user_repo
 import uvicorn
 
 
@@ -23,6 +24,7 @@ app = FastAPI()
 @app.get("/")
 async def hello():
     return {"msg":"hello"}
+
 
 # oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -103,19 +105,29 @@ async def hello():
 
 # User CRUD
 @app.post('/users/', tags=['Users'], summary="Create a new user", response_model=schemas.User_Out)
-async def create_user(user: schemas.User_Create_Update, db: Session = Depends(get_db)):
-    pass
+async def create_user(user: schemas.User_Create, db: Session = Depends(get_db)):
+    db_user=user_repo.get_user_by_username(db,user.username)
+    if db_user:
+        raise HTTPException(status_code=400,detail='username is taken')
+    hashed_password=user.password
+    is_admin=False
+    db_user=models.User(**user.dict(exclude=['password']),hashed_password=hashed_password,is_admin=is_admin)
+    return user_repo.create_user(db,db_user)
 
 @app.get('/users/', tags=['Users'], summary="Get a list of users", response_model=list[schemas.User_Out])
 async def list_users(db: Session = Depends(get_db)):
-    pass
+    return user_repo.get_all_users(db)
 
 @app.get('/users/{user_id}', tags=['Users'], summary="Get user by ID", response_model=schemas.User_Out)
 async def read_user(user_id: int, db: Session = Depends(get_db)):
+    # user=user_repo.get_user_by_id(db,user_id)
+    # if not user:
+    #     raise HTTPException(status_code=404,detail='user not found')
+    # return user
     pass
 
 @app.put('/users/{user_id}', tags=['Users'], summary="Update user by ID", response_model=schemas.User_Out)
-async def update_user(user_id: int, user: schemas.User_Create_Update, db: Session = Depends(get_db)):
+async def update_user(user_id: int, user: schemas.User_Update, db: Session = Depends(get_db)):
     pass
 
 # Post CRUD

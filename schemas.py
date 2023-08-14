@@ -14,14 +14,21 @@ class User_Base(BaseModel):
     last_name:str=Field(...,max_length=20,example='Connor')
     latitude:float|None=Field(None,example=12)
     longitude:float|None=Field(None,example=12)
+    
+class User_Username(User_Base):
+    username:str=Field(...,max_length=20,example='john123')
 
-class User_Create_Update(User_Base):
+class User_Password(User_Base):
     password:str=Field(...,max_length=20,example='password')
+    
+class User_Create(User_Username,User_Password):
     pass
 
-class User_Out(User_Base):
-    user_id:int=Field(...,example=1)
-    username:str=Field(...,max_length=20,example='john123')
+class User_Update(User_Password):
+    pass
+
+class User_Out(User_Username):
+    user_id:int=Field(...,example=1)   
 
 class User(User_Out):
     hashed_password:str=Field(...,max_length=100,example='hashed password')
