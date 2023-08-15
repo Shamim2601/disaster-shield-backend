@@ -129,11 +129,16 @@ async def read_user(user_id: int, db: Session = Depends(get_db)):
     pass
 
 @app.put('/users/{user_id}', tags=['Users'], summary="Update user by ID", response_model=schemas.User_Out)
-async def update_user(user_id: int, user: schemas.User_Update, db: Session = Depends(get_db)):
+async def update_user(user_id: int, user: schemas.User_Update, crnt_usr: Annotated[models.User, Depends(get_current_user)] , \
+    db: Session = Depends(get_db)):
+    
+    if crnt_usr.user_id != user_id:
+        raise HTTPException(status_code=400,detail="You can't edit ohter's profile")
     db_user=user_repo.get_user_by_id(db,user_id)
     if not db_user:
         raise HTTPException(status_code=404,detail='user not found')
     hashed_password=get_password_hash(user.password)
+    
     return user_repo.update_user(db,user_id,hashed_password,user)
 
 # Post CRUD
