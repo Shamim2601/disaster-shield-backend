@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from repository import user_repo
 import uvicorn
 from passlib.context import CryptContext
+from fastapi.middleware.cors import CORSMiddleware
 
 from dotenv import load_dotenv
 import os
@@ -22,6 +23,10 @@ ACCESS_TOKEN_KEY = os.getenv('ACCESS_TOKEN_KEY')
 ACCESS_TOKEN_ALGORITHM = os.getenv('ACCESS_TOKEN_ALGORITHM')
 ACCESS_TOKEN_EXPIRE_MINUTES = 10
 
+origins=[
+    "http://localhost:4200"
+]
+
 def get_db():
     db = SessionLocal()
     try:
@@ -31,6 +36,14 @@ def get_db():
 
 models.Base.metadata.create_all(bind=engine)
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -66,7 +79,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 async def login(form_data:Annotated[OAuth2PasswordRequestForm,Depends()],db:Session=Depends(get_db)):
     user=user_repo.get_user_by_username(db,form_data.username)
     if not user:
-        raise HTTPException(status_code=400,detail='Incorrect credentials')
+        raise HTTPException(status_code=400,detail='Incorrect credentialss')
     if not verify_password(form_data.password,user.hashed_password):
         raise HTTPException(status_code=400,detail='Incorrect credentials')
 
@@ -244,4 +257,4 @@ async def list_conversation_participants(conversation_id: int, db: Session = Dep
 #     return user_repo.get_all_posts(db)
 
 if __name__=="__main__":
-    uvicorn.run("main:app",port=4001,reload=True)
+    uvicorn.run("main:app",port=4001,reload=True,host="0.0.0.0")
