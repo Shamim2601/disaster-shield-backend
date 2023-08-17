@@ -242,6 +242,33 @@ async def delete_post_image(post_id:int,image_id:Annotated[str,Query(...,max_len
     image_service.deleteImage(image_id)
     db.delete(db_image)
     db.commit()
+
+@app.post('/posts/{post_id}/enlist',tags=['Posts'], summary="enlist to the volunteership")
+async def enlist_to_post(post_id:int,current_user:Annotated[models.User,Depends(get_current_user)],\
+    db:Session=Depends(get_db)):
+    
+    db_post:models.Post=post_repo.get_post_by_id(db,post_id)
+    if not db_post:
+        raise HTTPException(status_code=404,detail='post not found')
+    
+    post_enlistment=post_repo.get_post_enlistment(db,post_id,current_user.user_id)
+    if post_enlistment:
+        raise HTTPException(status_code=400,detail='already enlisted')
+    return post_repo.add_post_enlistment(db,post_id,current_user.user_id)
+
+@app.delete('/posts/{post_id}/enlist', tags=['Posts'], summary="De-enlist from the volunteership")
+async def de_enlist_from_post(post_id: int, current_user: models.User = Depends(get_current_user), 
+                              db: Session = Depends(get_db)):
+    db_post = post_repo.get_post_by_id(db, post_id)
+    if not db_post:
+        raise HTTPException(status_code=404, detail='Post not found')
+
+    post_enlistment = post_repo.get_post_enlistment(db, post_id, current_user.user_id)
+    if not post_enlistment:
+        raise HTTPException(status_code=400, detail='Not enlisted')
+    
+    db.delete(post_enlistment)
+    db.commit()
  
 @app.post('/posts/{post_id}/tags', tags=['Posts'], summary="add tag to post", response_model=schemas.Post_Tag)
 async def add_tag_to_post(post_id: int, tag:Annotated[str,Query(...,max_length=20)],\

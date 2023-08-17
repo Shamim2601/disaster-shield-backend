@@ -76,6 +76,14 @@ class Post_Create(Post_Base):
 class Post_Update(Post_Base):
     pass
 
+class Post_Enlistment(BaseModel):
+    post_id:int
+    user_id:int
+    user:User_Out
+    
+    class Config:
+        orm_mode=True
+
 class Post(Post_Base):
     post_id:int=Field(...)
     creation_time:int=Field(...)
@@ -83,6 +91,7 @@ class Post(Post_Base):
     tags:list[Post_Tag]=Field(...)
     images:list[Image]=Field(...)
     creator:User_Out=Field(...)
+    enlistments:list[Post_Enlistment]
     class Config:
         orm_mode=True
         

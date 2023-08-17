@@ -26,6 +26,7 @@ class User(Base):
     added_disasters=relationship("Disaster",back_populates="info_creator")
     missing_persons=relationship("Missing_Person",back_populates="creator")
     messages=relationship("Message",back_populates="sender")
+    enlistments=relationship("Post_Enlistment",back_populates="user")
     
     # list of the conversation where the user is participant
     conversation_participant_list=relationship("Conversation_Participant",back_populates="participant")
@@ -60,6 +61,7 @@ class Post(Base):
     tags=relationship("Post_Tag",back_populates="post",lazy=False)
     disaster=relationship("Disaster",back_populates="posts")
     images=relationship("Image",back_populates="post")
+    enlistments=relationship("Post_Enlistment",back_populates="post")
     
     
 class Post_Tag(Base):
@@ -131,6 +133,14 @@ class Image(Base):
     post_id=Column(Integer(),ForeignKey("posts.post_id"),nullable=True)
     
     post=relationship("Post",back_populates="images")
-    user=relationship("User",back_populates="image")   
+    user=relationship("User",back_populates="image")
+
+class Post_Enlistment(Base):
+    __tablename__ = "post_enlistments"
+    post_id=Column(Integer(),ForeignKey("posts.post_id"),primary_key=True)
+    user_id=Column(Integer(),ForeignKey("users.user_id"),primary_key=True)
+    
+    post=relationship("Post",back_populates="enlistments")
+    user=relationship("User",back_populates="enlistments")  
 
     

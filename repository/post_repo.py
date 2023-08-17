@@ -33,6 +33,7 @@ def get_post_tag(db:Session,post_id:int,tag:str):
     return db.query(models.Post_Tag)\
         .filter(models.Post_Tag.post_id == post_id,
         models.Post_Tag.tag == tag).first()
+
 def add_tag_to_post(db: Session, post_tag:schemas.Post_Tag):
         tag_obj = models.Post_Tag(**post_tag.dict())
         db.add(tag_obj)
@@ -46,3 +47,16 @@ def remove_tag_from_post(db: Session, post_id: int, tag: str):
         models.Post_Tag.tag == tag
     ).delete(synchronize_session=False)
     db.commit()
+    
+def get_post_enlistment(db:Session,post_id:int,user_id:int):
+    return db.query(models.Post_Enlistment).filter(
+        models.Post_Enlistment.post_id == post_id,
+        models.Post_Enlistment.user_id == user_id
+    ).first()
+
+def add_post_enlistment(db:Session,post_id:int,user_id:int):
+    post_enlistment=models.Post_Enlistment(post_id=post_id,user_id=user_id)
+    db.add(post_enlistment)
+    db.commit()
+    db.refresh(post_enlistment)
+    return post_enlistment
