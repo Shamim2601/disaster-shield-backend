@@ -70,7 +70,10 @@ class Post_Base(BaseModel):
     volunteers_needed:int|None=Field(None,gt=0)
     disaster_id:int|None=Field(None)
     
-class Post_Create_Update(Post_Base):
+class Post_Create(Post_Base):
+    pass
+
+class Post_Update(Post_Base):
     pass
 
 class Post(Post_Base):
@@ -79,6 +82,7 @@ class Post(Post_Base):
     creator_id:int=Field(...)
     tags:list[Post_Tag]=Field(...)
     images:list[Image]=Field(...)
+    creator:User_Out=Field(...)
     class Config:
         orm_mode=True
         

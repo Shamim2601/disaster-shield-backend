@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException,status
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from repository import user_repo,image_repo
+from repository import user_repo,image_repo,post_repo
 import uvicorn
 from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
@@ -181,23 +181,35 @@ async def update_user(user_id: int, user: schemas.User_Update, crnt_usr: Annotat
 
 # Post CRUD
 @app.post('/posts/', tags=['Posts'], summary="Create a new post", response_model=schemas.Post)
-async def create_post(post: schemas.Post_Create_Update,user:Annotated[models.User,Depends(get_current_user)], \
+async def create_post(post: schemas.Post_Create,user:Annotated[models.User,Depends(get_current_user)], \
     db: Session = Depends(get_db)):
-    #db_post=models.Post(**post.dict(),creator_id=user.user_id,creation_time=0,post_id=1)
-    #return db_post
+    
+    #TODO : Check if the disaster_id in the post exists
+    
+    return post_repo.create_post(db,post,user)
     pass
 
 @app.get('/posts/', tags=['Posts'], summary="Get a list of posts", response_model=list[schemas.Post])
 async def list_posts(db: Session = Depends(get_db)):
-    pass
+    return post_repo.get_all_posts(db)
 
 @app.get('/posts/{post_id}', tags=['Posts'], summary="Get post by ID", response_model=schemas.Post)
 async def read_post(post_id: int, db: Session = Depends(get_db)):
-    pass
+    db_post=post_repo.get_post_by_id(db,post_id)
+    if not db_post:
+        raise HTTPException(status_code=404,detail='post not found')
+    return db_post
 
 @app.put('/posts/{post_id}', tags=['Posts'], summary="Update post by ID", response_model=schemas.Post)
-async def update_post(post_id: int, post: schemas.Post_Create_Update, db: Session = Depends(get_db)):
-    pass
+async def update_post(post_id: int, post: schemas.Post_Update,user:Annotated[models.User,Depends(get_current_user)],\
+    db: Session = Depends(get_db)):
+    
+    db_post:models.Post=post_repo.get_post_by_id(db,post_id)
+    if not db_post:
+         raise HTTPException(status_code=404,detail='post not found')
+    if db_post.creator_id!=user.user_id:
+         raise HTTPException(status_code=401,detail='you cannot edit this post')
+    return post_repo.update_post(db,post_id,post)
 
 # Disaster CRUD
 @app.post('/disasters/', tags=['Disasters'], summary="Create a new disaster", response_model=schemas.Disaster)
