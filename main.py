@@ -3,10 +3,11 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException,status
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from repository import user_repo
+from repository import user_repo,image_repo
 import uvicorn
 from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import UploadFile
 
 from dotenv import load_dotenv
 import os
@@ -15,13 +16,14 @@ import models, schemas
 from database import SessionLocal, engine
 from datetime import timedelta,datetime
 from jose import JWTError,jwt
+from image_service import image_service
 
 
 load_dotenv()
 
 ACCESS_TOKEN_KEY = os.getenv('ACCESS_TOKEN_KEY')
 ACCESS_TOKEN_ALGORITHM = os.getenv('ACCESS_TOKEN_ALGORITHM')
-ACCESS_TOKEN_EXPIRE_MINUTES = 10
+ACCESS_TOKEN_EXPIRE_MINUTES = 180
 
 origins=[
     "http://localhost:4200"
@@ -116,8 +118,27 @@ async def get_current_user(token:Annotated[str,Depends(oauth2_scheme)],db:Sessio
 
 # User CRUD
 @app.get('/users/me',tags=['Users'],summary='Get Current User',response_model=schemas.User_Out)
-async def send_current_user(current_user:Annotated[schemas.User,Depends(get_current_user)]):
+async def send_current_user(current_user:Annotated[models.User,Depends(get_current_user)]):
     return current_user
+
+@app.post('/user/image/{user_id}',tags=['Users'])
+async def upload_user_image(user_id:int,file:UploadFile,\
+    current_user:Annotated[models.User,Depends(get_current_user)],db:Session=Depends(get_db)):
+
+    if current_user.user_id!=user_id:
+        raise HTTPException(status_code=401,detail='Unauthorized')
+    if file.content_type!='image/jpeg':
+        raise HTTPException(status_code=400,detail='Image Format Not Supported')
+    
+    if current_user.image_id:
+        image_id:str=current_user.image_id
+        image_service.deleteImage(image_id)
+        image_repo.delete_image(image_id,db)
+            
+    image:schemas.Image= image_service.uploadImage(file.file.read(),folder_name='/users')
+    image_repo.add_image(image,db)
+    image_repo.add_image_to_user(current_user.user_id,image,db)
+    return image    
 
 @app.post('/users/', tags=['Users'], summary="Create a new user", response_model=schemas.User_Out)
 async def create_user(user: schemas.User_Create, db: Session = Depends(get_db)):
@@ -141,6 +162,8 @@ async def read_user(user_id: int, db: Session = Depends(get_db)):
     return user
     pass
 
+
+
 @app.put('/users/{user_id}', tags=['Users'], summary="Update user by ID", response_model=schemas.User_Out)
 async def update_user(user_id: int, user: schemas.User_Update, crnt_usr: Annotated[models.User, Depends(get_current_user)] , \
     db: Session = Depends(get_db)):
@@ -153,6 +176,8 @@ async def update_user(user_id: int, user: schemas.User_Update, crnt_usr: Annotat
     hashed_password=get_password_hash(user.password)
     
     return user_repo.update_user(db,user_id,hashed_password,user)
+
+
 
 # Post CRUD
 @app.post('/posts/', tags=['Posts'], summary="Create a new post", response_model=schemas.Post)

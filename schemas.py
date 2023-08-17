@@ -9,6 +9,18 @@ class Dummy(BaseModel):
     class Config:
         orm_mode=True
 
+class Image(BaseModel):
+    # this unique image_id is the unique public_id in the cdn
+    image_id:str=Field(...,max_length=255)
+    # this url is the secure_id in the cdn
+    url:str=Field(...,max_length=1000)
+    
+    class Config:
+        orm_mode=True
+    
+    
+    
+
 class Access_Token(BaseModel):
     access_token: str
     token_type: str
@@ -36,7 +48,9 @@ class User_Update(User_Password):
     pass
 
 class User_Out(User_Username):
-    user_id:int=Field(...,example=1)   
+    user_id:int=Field(...,example=1)
+    # image_id:int|None=Field(None)
+    image:Image|None=Field(None)   
 
 class User(User_Out):
     hashed_password:str=Field(...,max_length=100,example='hashed password')
@@ -64,7 +78,7 @@ class Post(Post_Base):
     creation_time:int=Field(...)
     creator_id:int=Field(...)
     tags:list[Post_Tag]=Field(...)
-    
+    images:list[Image]=Field(...)
     class Config:
         orm_mode=True
         

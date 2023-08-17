@@ -19,7 +19,9 @@ class User(Base):
     is_admin=Column(Boolean(),default=False,nullable=False)
     latitude=Column(Float(),nullable=True)
     longitude=Column(Float(),nullable=True)
+    image_id=Column(String(255),ForeignKey("images.image_id"),nullable=True)
     
+    image=relationship("Image",back_populates="user")
     posts=relationship("Post",back_populates="creator")
     added_disasters=relationship("Disaster",back_populates="info_creator")
     missing_persons=relationship("Missing_Person",back_populates="creator")
@@ -53,9 +55,11 @@ class Post(Base):
     volunteers_needed=Column(Integer(),nullable=True)
     creator_id=Column(Integer(),ForeignKey("users.user_id"),nullable=False)
     disaster_id=Column(Integer(),ForeignKey("disasters.disaster_id"),nullable=True)
+    
     creator= relationship("User",back_populates="posts")
     tags=relationship("Post_Tag",back_populates="post",lazy=False)
     disaster=relationship("Disaster",back_populates="posts")
+    images=relationship("Image",back_populates="post")
     
     
 class Post_Tag(Base):
@@ -118,5 +122,15 @@ class Conversation_Participant(Base):
     
     participant = relationship("User",back_populates="conversation_participant_list")  # Assuming you have a User class
     conversation = relationship("Conversation", back_populates="participants")
+    
+class Image(Base):
+    __tablename__ = "images"
+    image_id = Column(String(255),primary_key=True)
+    url=Column(String(1000),nullable=False)
+    
+    post_id=Column(Integer(),ForeignKey("posts.post_id"),nullable=True)
+    
+    post=relationship("Post",back_populates="images")
+    user=relationship("User",back_populates="image")   
 
     
