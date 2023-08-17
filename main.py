@@ -7,7 +7,7 @@ from repository import user_repo,image_repo,post_repo
 import uvicorn
 from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import UploadFile
+from fastapi import UploadFile,Query,Body,Path
 
 from dotenv import load_dotenv
 import os
@@ -121,7 +121,7 @@ async def get_current_user(token:Annotated[str,Depends(oauth2_scheme)],db:Sessio
 async def send_current_user(current_user:Annotated[models.User,Depends(get_current_user)]):
     return current_user
 
-@app.post('/user/image/{user_id}',tags=['Users'])
+@app.post('/user/{user_id}/image',tags=['Users'],response_model=schemas.Image)
 async def upload_user_image(user_id:int,file:UploadFile,\
     current_user:Annotated[models.User,Depends(get_current_user)],db:Session=Depends(get_db)):
 
@@ -210,6 +210,40 @@ async def update_post(post_id: int, post: schemas.Post_Update,user:Annotated[mod
     if db_post.creator_id!=user.user_id:
          raise HTTPException(status_code=401,detail='you cannot edit this post')
     return post_repo.update_post(db,post_id,post)
+
+@app.post('/posts/{post_id}/image',tags=['Posts'], summary="add image to post", response_model=schemas.Image)
+async def upload_post_images(post_id:int,file:UploadFile,\
+    current_user:Annotated[models.User,Depends(get_current_user)],db:Session=Depends(get_db)):
+    
+    db_post:models.Post=post_repo.get_post_by_id(db,post_id)
+    if not db_post:
+         raise HTTPException(status_code=404,detail='post not found')
+    if current_user.user_id!=db_post.creator_id:
+        raise HTTPException(status_code=401,detail='Unauthorized')
+    if file.content_type!='image/jpeg':
+        raise HTTPException(status_code=400,detail='Image Format Not Supported')
+    
+            
+    image:schemas.Image= image_service.uploadImage(file.file.read(),folder_name='/posts')
+    image_repo.add_image(image,db)
+    return image_repo.add_image_to_post(image.image_id,db_post.post_id,db)
+
+@app.delete('/posts/{post_id}/image',tags=['Posts'], summary="delete image to post")
+async def delete_post_image(post_id:int,image_id:Annotated[str,Query(...,max_length=255)],\
+    current_user:Annotated[models.User,Depends(get_current_user)],db:Session=Depends(get_db)):
+    db_post:models.Post=post_repo.get_post_by_id(db,post_id)
+    if not db_post:
+        raise HTTPException(status_code=404,detail='post not found')
+    if current_user.user_id!=db_post.creator_id:
+        raise HTTPException(status_code=401,detail='Unauthorized')
+    db_image=image_repo.get_image_by_id(image_id,db)
+    if not db_image or db_image.post_id!=db_post.post_id:
+        raise HTTPException(status_code=404,detail='image not found')
+    image_service.deleteImage(image_id)
+    db.delete(db_image)
+    db.commit()
+    
+    
 
 # Disaster CRUD
 @app.post('/disasters/', tags=['Disasters'], summary="Create a new disaster", response_model=schemas.Disaster)
