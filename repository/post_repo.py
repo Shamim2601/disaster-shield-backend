@@ -60,3 +60,19 @@ def add_post_enlistment(db:Session,post_id:int,user_id:int):
     db.commit()
     db.refresh(post_enlistment)
     return post_enlistment
+
+def submit_post_report(db: Session, post_id: int, user_id: int, report_reason: schemas.Post_Report_Reason):
+    report = models.Post_Report(post_id=post_id, user_id=user_id, report_reason=report_reason)
+    db.add(report)
+    db.commit()
+    db.refresh(report)
+    return report
+
+def get_all_post_reports(db: Session):
+    return db.query(models.Post_Report).all()
+
+def get_post_report(db: Session, post_id: int, user_id: int):
+    return db.query(models.Post_Report).filter(
+        models.Post_Report.post_id == post_id,
+        models.Post_Report.user_id == user_id
+    ).first()

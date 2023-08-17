@@ -56,7 +56,20 @@ class User(User_Out):
     hashed_password:str=Field(...,max_length=100,example='hashed password')
     class Config:
         orm_mode=True
-        
+ 
+class Post_Report_Reason(str, Enum):
+    inappropriate = "inappropriate"
+    fraudulent = "fraudulent"
+    inaccurate = "inaccurate"
+
+class Post_Report(BaseModel):
+    post_id: int
+    user_id: int
+    report_reason: Post_Report_Reason
+    user:User
+    class Config:
+        orm_mode = True
+       
 
 class Post_Tag(BaseModel):
     tag:str=Field(...,max_length=20)

@@ -296,7 +296,21 @@ async def remove_tag_from_post(post_id: int, tag: str,\
     
     post_repo.remove_tag_from_post(db, post_id, tag)
 
-   
+@app.post('/posts/{post_id}/report', tags=['Posts'], summary="Report a post")
+async def report_post(post_id: int,\
+    current_user: Annotated[models.User, Depends(get_current_user)],\
+    report_reason: schemas.Post_Report_Reason,\
+    db: Session = Depends(get_db)):
+    
+    db_post: models.Post = post_repo.get_post_by_id(db, post_id)
+    if not db_post:
+        raise HTTPException(status_code=404, detail='Post not found')
+
+    existing_report = post_repo.get_post_report(db, post_id, current_user.user_id)
+    if existing_report:
+        raise HTTPException(status_code=400, detail='Already reported')
+
+    return post_repo.submit_post_report(db, post_id, current_user.user_id, report_reason) 
     
 
 # Disaster CRUD

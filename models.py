@@ -27,6 +27,7 @@ class User(Base):
     missing_persons=relationship("Missing_Person",back_populates="creator")
     messages=relationship("Message",back_populates="sender")
     enlistments=relationship("Post_Enlistment",back_populates="user")
+    reports = relationship("Post_Report", back_populates="user")
     
     # list of the conversation where the user is participant
     conversation_participant_list=relationship("Conversation_Participant",back_populates="participant")
@@ -62,6 +63,7 @@ class Post(Base):
     disaster=relationship("Disaster",back_populates="posts")
     images=relationship("Image",back_populates="post")
     enlistments=relationship("Post_Enlistment",back_populates="post")
+    reports = relationship("Post_Report", back_populates="post")
     
     
 class Post_Tag(Base):
@@ -143,4 +145,14 @@ class Post_Enlistment(Base):
     post=relationship("Post",back_populates="enlistments")
     user=relationship("User",back_populates="enlistments")  
 
-    
+class Post_Report(Base):
+    __tablename__ = "post_reports"
+    post_id = Column(Integer(), ForeignKey("posts.post_id"), primary_key=True)
+    user_id = Column(Integer(), ForeignKey("users.user_id"), primary_key=True)
+    report_reason = Column(String(20),\
+    CheckConstraint("report_reason IN ('inappropriate', 'fraudulent', 'inaccurate')"),\
+    nullable=False)
+
+    post = relationship("Post", back_populates="reports")
+    user = relationship("User", back_populates="reports")
+
