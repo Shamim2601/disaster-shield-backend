@@ -242,7 +242,34 @@ async def delete_post_image(post_id:int,image_id:Annotated[str,Query(...,max_len
     image_service.deleteImage(image_id)
     db.delete(db_image)
     db.commit()
+ 
+@app.post('/posts/{post_id}/tags', tags=['Posts'], summary="add tag to post", response_model=schemas.Post_Tag)
+async def add_tag_to_post(post_id: int, tag:Annotated[str,Query(...,max_length=20)],\
+    current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    db_post = post_repo.get_post_by_id(db, post_id)
+    if not db_post:
+        raise HTTPException(status_code=404, detail='Post not found')
+    if current_user.user_id != db_post.creator_id:
+        raise HTTPException(status_code=401, detail='Unauthorized')
+    db_post_tag=post_repo.get_post_tag(db,post_id,tag)
+    if db_post_tag:
+        raise HTTPException(status_code=400, detail='tag already exists')
     
+    tag_obj = post_repo.add_tag_to_post(db,schemas.Post_Tag(tag=tag,post_id=post_id))
+    return tag_obj
+
+@app.delete('/posts/{post_id}/tags', tags=['Posts'], summary="remove tag from post")
+async def remove_tag_from_post(post_id: int, tag: str,\
+    current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    db_post = post_repo.get_post_by_id(db, post_id)
+    if not db_post:
+        raise HTTPException(status_code=404, detail='Post not found')
+    if current_user.user_id != db_post.creator_id:
+        raise HTTPException(status_code=401, detail='Unauthorized')
+    
+    post_repo.remove_tag_from_post(db, post_id, tag)
+
+   
     
 
 # Disaster CRUD

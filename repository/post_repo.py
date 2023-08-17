@@ -28,4 +28,21 @@ def update_post(db:Session,post_id:int,post:schemas.Post_Update):
     
     db.commit()
     return get_post_by_id(db,post_id)
-        
+
+def get_post_tag(db:Session,post_id:int,tag:str):
+    return db.query(models.Post_Tag)\
+        .filter(models.Post_Tag.post_id == post_id,
+        models.Post_Tag.tag == tag).first()
+def add_tag_to_post(db: Session, post_tag:schemas.Post_Tag):
+        tag_obj = models.Post_Tag(**post_tag.dict())
+        db.add(tag_obj)
+        db.commit()
+        db.refresh(tag_obj)
+        return tag_obj
+
+def remove_tag_from_post(db: Session, post_id: int, tag: str):
+    db.query(models.Post_Tag).filter(
+        models.Post_Tag.post_id == post_id,
+        models.Post_Tag.tag == tag
+    ).delete(synchronize_session=False)
+    db.commit()
