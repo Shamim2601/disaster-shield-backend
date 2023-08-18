@@ -26,6 +26,13 @@ def add_image_to_post(image_id:str,post_id:int,db:Session):
         image.post_id=post_id
         db.commit()
         return image
+    
+def add_image_to_missing_person(image_id:str,missing_person_id:int,db:Session):
+    image=get_image_by_id(image_id,db)
+    if image:
+        image.missing_id=missing_person_id
+        db.commit()
+        return image
 
 def add_image(image:schemas.Image,db:Session):
     db_image=models.Image(**image.dict())

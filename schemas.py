@@ -3,11 +3,11 @@ from typing import Annotated
 from pydantic import BaseModel,Field
 from enum import Enum
 
-class Dummy(BaseModel):
-    id:int
-    title:str=Field(...,max_length=20)
-    class Config:
-        orm_mode=True
+# class Dummy(BaseModel):
+#     id:int
+#     title:str=Field(...,max_length=20)
+#     class Config:
+#         orm_mode=True
 
 class Image(BaseModel):
     # this unique image_id is the unique public_id in the cdn
@@ -184,7 +184,7 @@ class Missing_Person_Base(BaseModel):
     phone:str|None=Field(None,max_length=30)
     address:str|None=Field(None,max_length=200)
     identifying_marks:str|None=Field(None,max_length=500)
-    disaster_id: int
+    disaster_id: int|None=Field(None)
 
     
         
@@ -196,9 +196,9 @@ class Missing_Person_Update(Missing_Person_Base):
 
 class Missing_Person(Missing_Person_Base):
     missing_person_id: int
-    creator_id: int
+    creator:User_Out
     creation_time: int
-    
+    images:list[Image]=Field(...)
     
     class Config:
         orm_mode = True

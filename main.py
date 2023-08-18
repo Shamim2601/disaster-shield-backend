@@ -3,7 +3,7 @@ from typing import Annotated,Optional
 from fastapi import Depends, FastAPI, HTTPException,status
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from repository import user_repo,image_repo,post_repo, disaster_repo
+from repository import user_repo,image_repo,post_repo, disaster_repo,missing_repo
 import uvicorn
 from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
@@ -349,7 +349,6 @@ async def add_comment_to_post(post_id: int,
 
 
 # Disaster CRUD
-#jinan started herre:
 
 @app.post('/disasters/', tags=['Disasters'], summary="Create a new disaster", response_model=schemas.Disaster)
 async def create_disaster(disaster: schemas.Disaster_Create, crnt_usr: Annotated[models.User, Depends(get_current_user)], \
@@ -393,29 +392,88 @@ async def update_disaster(disaster_id: int, disaster: schemas.Disaster_Update,cr
         raise HTTPException(status_code=401,detail='Only the creator can update the disaster')
     return disaster_repo.update_disaster(db,disaster_id,disaster)
 
-#jinan_end
     
     
 
 
 # Missing Person CRUD
-@app.post('/missing/', tags=['Missing Person'], summary="Create a new missing person report", response_model=schemas.Missing_Person)
-async def create_missing(missing: schemas.Missing_Person_Create, db: Session = Depends(get_db)):
-    pass
+@app.post('/missing/', tags=['Missing Person'], summary="Create a new missing person report",response_model=schemas.Missing_Person)
+async def create_missing(missing: schemas.Missing_Person_Create,
+    current_user:Annotated[models.User, Depends(get_current_user)],\
+    db: Session = Depends(get_db)):
+    if missing.disaster_id:
+        disaster=disaster_repo.get_disaster_by_id(db,missing.disaster_id)
+        if not disaster:
+            raise HTTPException(status_code=404, detail='Disaster not found')
+    return missing_repo.create_missing_person(db,missing,current_user)
 
 @app.get('/missing/', tags=['Missing Person'], summary="Get a list of missing persons", response_model=list[schemas.Missing_Person])
 async def list_missing_persons(db: Session = Depends(get_db)):
-    pass
+    return missing_repo.get_all_missing_persons(db)
 
 @app.get('/missing/{missing_person_id}', tags=['Missing Person'], summary="Get missing person by ID", response_model=schemas.Missing_Person)
 async def read_missing(missing_person_id: int, db: Session = Depends(get_db)):
-    pass
+    missing_person = missing_repo.get_missing_person_by_id(db, missing_person_id)
+    if not missing_person:
+        raise HTTPException(status_code=404, detail='Missing person not found')
+    return missing_person
 
 @app.put('/missing/{missing_person_id}', tags=['Missing Person'], summary="Update missing person by ID", response_model=schemas.Missing_Person)
-async def update_missing(missing_person_id: int, missing: schemas.Missing_Person_Update, db: Session = Depends(get_db)):
-    pass
+async def update_missing(missing_person_id: int, missing: schemas.Missing_Person_Update,\
+    current_user:Annotated[models.User, Depends(get_current_user)],\
+    db: Session = Depends(get_db)):
+    db_missing_person = missing_repo.get_missing_person_by_id(db, missing_person_id)
+    if not db_missing_person:
+        raise HTTPException(status_code=404, detail='Missing person not found')
+    if db_missing_person.creator_id!=current_user.user_id:
+        raise HTTPException(status_code=401,detail='Only the creator can update the missing person')
+    return missing_repo.update_missing_person(db,missing_person_id,missing)
 
+@app.post('/missing/{missing_person_id}/image', tags=['Missing Person'], summary="Add image to missing person", response_model=schemas.Image)
+async def upload_missing_person_image(
+        missing_person_id: int,
+        file: UploadFile,
+        current_user: Annotated[models.User, Depends(get_current_user)],
+        db: Session = Depends(get_db)
+):
+    db_missing_person = missing_repo.get_missing_person_by_id(db, missing_person_id)
+    if not db_missing_person:
+        raise HTTPException(status_code=404, detail='Missing person not found')
+    
+    if current_user.user_id != db_missing_person.creator_id:
+        raise HTTPException(status_code=401, detail='Unauthorized')
+    
+    if file.content_type != 'image/jpeg':
+        raise HTTPException(status_code=400, detail='Image Format Not Supported')
+    
+    image: schemas.Image = image_service.uploadImage(file.file.read(), folder_name='/missing_persons')
+    image_repo.add_image(image, db)
+    return image_repo.add_image_to_missing_person(image.image_id, db_missing_person.missing_person_id, db)
 
+@app.delete('/missing/{missing_person_id}/image', tags=['Missing Person'], summary="Delete image from missing person")
+async def delete_missing_person_image(
+        missing_person_id: int,
+        image_id: Annotated[str, Query(..., max_length=255)],
+        current_user: Annotated[models.User, Depends(get_current_user)],
+        db: Session = Depends(get_db)
+):
+    db_missing_person = missing_repo.get_missing_person_by_id(db, missing_person_id)
+    if not db_missing_person:
+        raise HTTPException(status_code=404, detail='Missing person not found')
+    
+    if current_user.user_id != db_missing_person.creator_id:
+        raise HTTPException(status_code=401, detail='Unauthorized')
+    
+    db_image = image_repo.get_image_by_id(image_id, db)
+    if not db_image or db_image.missing_id != db_missing_person.missing_person_id:
+        raise HTTPException(status_code=404, detail='Image not found')
+    
+    image_service.deleteImage(image_id)
+    db.delete(db_image)
+    db.commit()
+
+  
+    
 # Conversation CRUD
 @app.post('/messages/conversations/', tags=['Messages'], summary="Create a new conversation", response_model=schemas.Conversation)
 async def create_conversation(conversation: schemas.Conversation_Create, db: Session = Depends(get_db)):

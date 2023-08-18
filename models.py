@@ -4,10 +4,10 @@ from sqlalchemy.orm import relationship
 from database import Base
 
 
-class Dummy(Base):
-    __tablename__="dummy"
-    id=Column(Integer(),primary_key=True,autoincrement=True)
-    title=Column(String(20),unique=True,nullable=False)
+# class Dummy(Base):
+#     __tablename__="dummy"
+#     id=Column(Integer(),primary_key=True,autoincrement=True)
+#     title=Column(String(20),unique=True,nullable=False)
     
 class User(Base):
     __tablename__="users"
@@ -99,6 +99,7 @@ class Missing_Person(Base):
     
     creator= relationship("User",back_populates="missing_persons")
     disaster=relationship("Disaster",back_populates="missing_persons")
+    images=relationship("Image",back_populates="missing_person")
     
 class Conversation(Base):
     __tablename__ = "conversations"
@@ -135,10 +136,12 @@ class Image(Base):
     url=Column(String(1000),nullable=False)
     
     post_id=Column(Integer(),ForeignKey("posts.post_id"),nullable=True)
+    missing_id=Column(Integer(),ForeignKey("missing_persons.missing_person_id"),nullable=True)
     
     post=relationship("Post",back_populates="images")
     user=relationship("User",back_populates="image")
     comment = relationship("Post_Comment", back_populates="image")
+    missing_person=relationship("Missing_Person",back_populates="images")
 
 class Post_Enlistment(Base):
     __tablename__ = "post_enlistments"
