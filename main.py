@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException,status
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from repository import user_repo,image_repo
+from repository import user_repo,image_repo, disaster_repo
 import uvicorn
 from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
@@ -200,21 +200,53 @@ async def update_post(post_id: int, post: schemas.Post_Create_Update, db: Sessio
     pass
 
 # Disaster CRUD
+#jinan started herre:
+
 @app.post('/disasters/', tags=['Disasters'], summary="Create a new disaster", response_model=schemas.Disaster)
-async def create_disaster(disaster: schemas.Disaster_Create, db: Session = Depends(get_db)):
-    pass
+async def create_disaster(disaster: schemas.Disaster_Create, crnt_usr: Annotated[models.User, Depends(get_current_user)], \
+     db: Session = Depends(get_db)):
+    if crnt_usr.is_admin==False:
+        raise HTTPException(status_code=401,detail='None but admins can create disasters')
+    
+    db_disaster=disaster_repo.get_disaster_by_title(db,disaster.title)
+    if db_disaster:
+        raise HTTPException(status_code=400,detail='title is taken')
+    
+    creatoin_time=datetime.now()
+    creator_id=crnt_usr.user_id
+    db_disaster=models.Disaster(**disaster.dict(),info_creation_time = creatoin_time, info_creator_id = creator_id)
+    return disaster_repo.create_disaster(db,db_disaster)
 
 @app.get('/disasters/', tags=['Disasters'], summary="Get a list of disasters", response_model=list[schemas.Disaster])
 async def list_disasters(db: Session = Depends(get_db)):
-    pass
+    return disaster_repo.get_all_disasters(db)
+
 
 @app.get('/disasters/{disaster_id}', tags=['Disasters'], summary="Get disaster by ID", response_model=schemas.Disaster)
 async def read_disaster(disaster_id: int, db: Session = Depends(get_db)):
-    pass
+    disaster = disaster_repo.get_disaster_by_id(db,disaster_id)
+    if not disaster:    
+        raise HTTPException(status_code=404,detail='disaster not found')    
+    return disaster
+
 
 @app.put('/disasters/{disaster_id}', tags=['Disasters'], summary="Update disaster by ID", response_model=schemas.Disaster)
-async def update_disaster(disaster_id: int, disaster: schemas.Disaster_Update, db: Session = Depends(get_db)):
-    pass
+async def update_disaster(disaster_id: int, disaster: schemas.Disaster_Update,crnt_user:Annotated[models.User, Depends(get_current_user)] , \
+    db: Session = Depends(get_db)):
+    if crnt_user.is_admin==False:
+        raise HTTPException(status_code=401,detail='None but admins can update disasters') 
+    if crnt_user.user_id!=disaster.info_creator_id:
+        raise HTTPException(status_code=401,detail='Only the creator can update the disaster')
+
+    db_disaster=disaster_repo.get_disaster_by_id(db,disaster_id)
+    if not db_disaster:
+        raise HTTPException(status_code=404,detail='disaster not found')
+    return disaster_repo.update_disaster(db,disaster_id,disaster)
+
+#jinan_end
+    
+    
+
 
 # Missing Person CRUD
 @app.post('/missing/', tags=['Missing Person'], summary="Create a new missing person report", response_model=schemas.Missing_Person)

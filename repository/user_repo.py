@@ -38,3 +38,10 @@ def update_user(db:Session,user_id:int,hashed_password:str,user:schemas.User_Upd
 #     posts= db.query(models.Post).all()
 #     print(posts[0].tags)
 #     return posts
+
+# Disaster
+# **************
+# create a disaster (must be admin) 
+# update a disaster (must be admin & same user)
+# get all disasters
+
