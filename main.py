@@ -204,17 +204,18 @@ async def update_post(post_id: int, post: schemas.Post_Create_Update, db: Sessio
 
 @app.post('/disasters/', tags=['Disasters'], summary="Create a new disaster", response_model=schemas.Disaster)
 async def create_disaster(disaster: schemas.Disaster_Create, crnt_usr: Annotated[models.User, Depends(get_current_user)], \
-     db: Session = Depends(get_db)):
+    db: Session = Depends(get_db)):
     if crnt_usr.is_admin==False:
         raise HTTPException(status_code=401,detail='None but admins can create disasters')
     
-    db_disaster=disaster_repo.get_disaster_by_title(db,disaster.title)
-    if db_disaster:
-        raise HTTPException(status_code=400,detail='title is taken')
+    # disaster title is not unique
+    # db_disaster=disaster_repo.get_disaster_by_title(db,disaster.title)
+    # if db_disaster:
+    #     raise HTTPException(status_code=400,detail='title is taken')
     
-    creatoin_time=datetime.now()
+    creation_time=int(round(datetime.now().timestamp()))
     creator_id=crnt_usr.user_id
-    db_disaster=models.Disaster(**disaster.dict(),info_creation_time = creatoin_time, info_creator_id = creator_id)
+    db_disaster=models.Disaster(**disaster.dict(),info_creation_time = creation_time, info_creator_id = creator_id)
     return disaster_repo.create_disaster(db,db_disaster)
 
 @app.get('/disasters/', tags=['Disasters'], summary="Get a list of disasters", response_model=list[schemas.Disaster])
@@ -234,13 +235,13 @@ async def read_disaster(disaster_id: int, db: Session = Depends(get_db)):
 async def update_disaster(disaster_id: int, disaster: schemas.Disaster_Update,crnt_user:Annotated[models.User, Depends(get_current_user)] , \
     db: Session = Depends(get_db)):
     if crnt_user.is_admin==False:
-        raise HTTPException(status_code=401,detail='None but admins can update disasters') 
-    if crnt_user.user_id!=disaster.info_creator_id:
-        raise HTTPException(status_code=401,detail='Only the creator can update the disaster')
-
+        raise HTTPException(status_code=401,detail='None but admins can update disasters')
+    
     db_disaster=disaster_repo.get_disaster_by_id(db,disaster_id)
     if not db_disaster:
         raise HTTPException(status_code=404,detail='disaster not found')
+    if crnt_user.user_id!=db_disaster.info_creator_id:
+        raise HTTPException(status_code=401,detail='Only the creator can update the disaster')
     return disaster_repo.update_disaster(db,disaster_id,disaster)
 
 #jinan_end

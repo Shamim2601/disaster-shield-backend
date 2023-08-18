@@ -50,7 +50,8 @@ class User_Update(User_Password):
 class User_Out(User_Username):
     user_id:int=Field(...,example=1)
     # image_id:int|None=Field(None)
-    image:Image|None=Field(None)   
+    image:Image|None=Field(None)
+    is_admin:bool=Field(False)   
 
 class User(User_Out):
     hashed_password:str=Field(...,max_length=100,example='hashed password')
@@ -106,8 +107,7 @@ class Disaster_Update(Disaster_Base):
 class Disaster(Disaster_Base):
     disaster_id:int
     info_creation_time:int
-    info_creator_id:int
-    
+    info_creator:User_Out
     class Config:
         orm_mode=True
 
