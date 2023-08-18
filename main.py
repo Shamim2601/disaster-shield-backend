@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated,Optional
 
 from fastapi import Depends, FastAPI, HTTPException,status
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
@@ -7,7 +7,7 @@ from repository import user_repo,image_repo,post_repo
 import uvicorn
 from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import UploadFile,Query,Body,Path
+from fastapi import UploadFile,Query,Body,Path,File,Form
 
 from dotenv import load_dotenv
 import os
@@ -311,7 +311,42 @@ async def report_post(post_id: int,\
         raise HTTPException(status_code=400, detail='Already reported')
 
     return post_repo.submit_post_report(db, post_id, current_user.user_id, report_reason) 
+
+# TODO make upload File Optional
+@app.post('/posts/{post_id}/comment', tags=['Posts'], summary="Add a comment")#response_model=schemas.Post_Comment)
+async def add_comment_to_post(post_id: int, 
+    current_user: Annotated[models.User, Depends(get_current_user)],file:UploadFile,\
+    content:Annotated[str|None,Form(...,max_length=500)],\
+    db: Session = Depends(get_db),):
     
+    db_post = post_repo.get_post_by_id(db, post_id)
+    if not db_post:
+        raise HTTPException(status_code=404, detail='Post not found')
+    
+    if file.content_type!='image/jpeg':
+        raise HTTPException(status_code=400,detail='Image Format Not Supported')
+    image:schemas.Image= image_service.uploadImage(file.file.read(),folder_name='/comments')
+    image_repo.add_image(image,db)
+    commenter_id=current_user.user_id
+    image_id=image.image_id
+    created_at=int(round(datetime.now().timestamp()))
+    
+    comment=models.Post_Comment(commenter_id=commenter_id,image_id=image_id,\
+    created_at=created_at,content=content,post_id=post_id)
+    
+    db.add(comment)
+    db.commit()
+    db.refresh(comment)
+    print(comment.image)
+    return comment
+    
+    # comment_data = comment.dict()
+    # comment_data["commenter_id"] = current_user.user_id
+    # comment_data["post_id"] = post_id
+    # comment_data["time"] = int(round(datetime.utcnow().timestamp()))
+    # return comment_data
+    #return post_repo.add_comment_to_post(db, schemas.Post_Comment_Create(**comment_data))
+
 
 # Disaster CRUD
 @app.post('/disasters/', tags=['Disasters'], summary="Create a new disaster", response_model=schemas.Disaster)

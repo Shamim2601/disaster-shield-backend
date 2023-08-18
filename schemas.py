@@ -77,6 +77,27 @@ class Post_Tag(BaseModel):
     class Config:
         orm_mode=True
 
+class Post_Comment_Base(BaseModel):
+    content: str|None = Field(None, max_length=500, description="Content of the comment")
+    
+
+class Post_Comment_Create(Post_Comment_Base):
+    pass
+
+class Post_Comment_Update(Post_Comment_Base):
+    pass
+
+class Post_Comment(Post_Comment_Base):
+    comment_id: int = Field(..., description="Unique ID of the comment")
+    commenter: User_Out
+    commenter_id: int
+    post_id: int
+    created_at: int
+    image:Image|None
+    commenter_id:User
+    class Config:
+        orm_mode = True
+
 class Post_Base(BaseModel):
     title:str=Field(...,max_length=100)
     post_content:str|None=Field(None,max_length=1000)
@@ -105,6 +126,7 @@ class Post(Post_Base):
     images:list[Image]=Field(...)
     creator:User_Out=Field(...)
     enlistments:list[Post_Enlistment]
+    # comments:list[Post_Comment]
     class Config:
         orm_mode=True
         
@@ -226,3 +248,23 @@ class Conversation(Conversation_Create):
     class Config:
         orm_mode = True
 
+class Post_Comment_Base(BaseModel):
+    content: str|None = Field(None, max_length=500, description="Content of the comment")
+    
+
+class Post_Comment_Create(Post_Comment_Base):
+    pass
+
+class Post_Comment_Update(Post_Comment_Base):
+    pass
+
+class Post_Comment(Post_Comment_Base):
+    comment_id: int = Field(..., description="Unique ID of the comment")
+    commenter: User_Out
+    commenter_id: int
+    post_id: int
+    created_at: int
+    image:Image|None
+    commenter_id:User
+    class Config:
+        orm_mode = True

@@ -28,6 +28,7 @@ class User(Base):
     messages=relationship("Message",back_populates="sender")
     enlistments=relationship("Post_Enlistment",back_populates="user")
     reports = relationship("Post_Report", back_populates="user")
+    comments = relationship("Post_Comment", back_populates="commenter")
     
     # list of the conversation where the user is participant
     conversation_participant_list=relationship("Conversation_Participant",back_populates="participant")
@@ -64,6 +65,7 @@ class Post(Base):
     images=relationship("Image",back_populates="post")
     enlistments=relationship("Post_Enlistment",back_populates="post")
     reports = relationship("Post_Report", back_populates="post")
+    comments = relationship("Post_Comment", back_populates="post")
     
     
 class Post_Tag(Base):
@@ -136,6 +138,7 @@ class Image(Base):
     
     post=relationship("Post",back_populates="images")
     user=relationship("User",back_populates="image")
+    comment = relationship("Post_Comment", back_populates="image")
 
 class Post_Enlistment(Base):
     __tablename__ = "post_enlistments"
@@ -156,3 +159,15 @@ class Post_Report(Base):
     post = relationship("Post", back_populates="reports")
     user = relationship("User", back_populates="reports")
 
+class Post_Comment(Base):
+    __tablename__ = "post_comments"
+    comment_id = Column(Integer(), primary_key=True, autoincrement=True)
+    commenter_id = Column(Integer(), ForeignKey("users.user_id"), nullable=False)
+    post_id = Column(Integer(), ForeignKey("posts.post_id"), nullable=False)
+    content = Column(String(500), nullable=True)
+    image_id = Column(String(255), ForeignKey("images.image_id"), nullable=True)
+    created_at = Column(Integer(), nullable=False) 
+    
+    commenter = relationship("User", back_populates="comments")
+    post = relationship("Post", back_populates="comments")
+    image = relationship("Image", back_populates="comment")
