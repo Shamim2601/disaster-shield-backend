@@ -113,7 +113,6 @@ class Post_Update(Post_Base):
 
 class Post_Enlistment(BaseModel):
     post_id:int
-    user_id:int
     user:User_Out
     
     class Config:
@@ -122,7 +121,6 @@ class Post_Enlistment(BaseModel):
 class Post(Post_Base):
     post_id:int=Field(...)
     creation_time:int=Field(...)
-    creator_id:int=Field(...)
     tags:list[Post_Tag]=Field(...)
     images:list[Image]=Field(...)
     creator:User_Out=Field(...)

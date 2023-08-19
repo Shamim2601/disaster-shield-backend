@@ -39,6 +39,8 @@ def get_db():
 models.Base.metadata.create_all(bind=engine)
 app = FastAPI()
 
+allowed_image_types=['image/jpg','image/jpeg','image/png']
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -116,18 +118,19 @@ async def get_current_user(token:Annotated[str,Depends(oauth2_scheme)],db:Sessio
 
 
 
+
 # User CRUD
 @app.get('/users/me',tags=['Users'],summary='Get Current User',response_model=schemas.User_Out)
 async def send_current_user(current_user:Annotated[models.User,Depends(get_current_user)]):
     return current_user
 
-@app.post('/user/{user_id}/image',tags=['Users'],response_model=schemas.Image)
+@app.post('/users/{user_id}/image',tags=['Users'],response_model=schemas.Image)
 async def upload_user_image(user_id:int,file:UploadFile,\
     current_user:Annotated[models.User,Depends(get_current_user)],db:Session=Depends(get_db)):
-
     if current_user.user_id!=user_id:
         raise HTTPException(status_code=401,detail='Unauthorized')
-    if file.content_type!='image/jpeg':
+    print(file.content_type)
+    if not file.content_type in allowed_image_types:
         raise HTTPException(status_code=400,detail='Image Format Not Supported')
     
     if current_user.image_id:
@@ -146,7 +149,7 @@ async def create_user(user: schemas.User_Create, db: Session = Depends(get_db)):
     if db_user:
         raise HTTPException(status_code=400,detail='username is taken')
     hashed_password=get_password_hash(user.password)
-    is_admin=False
+    is_admin=True   
     db_user=models.User(**user.dict(exclude=['password']),hashed_password=hashed_password,is_admin=is_admin)
     return user_repo.create_user(db,db_user)
 
