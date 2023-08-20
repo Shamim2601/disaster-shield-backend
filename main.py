@@ -491,7 +491,7 @@ async def create_conversation(conversation: schemas.Conversation_Create, crnt_us
     creation_time = int(round(datetime.now().timestamp()))
     db_conversation = models.Conversation(**conversation.dict(), created_at = creation_time)
     db_conversation_participant = models.Conversation_Participant(conversation_id = db_conversation.conversation_id, participant_id = crnt_user.user_id, is_creator = True)
-    messenger_repo.add_conversation_participant(db, db_conversation_participant)    
+    messenger_repo.add_conversation_participant(db, db_conversation_participant) ##Is it correct for our model? Need opinion.   
     return messenger_repo.create_conversation(db, db_conversation)
 
 
@@ -502,13 +502,12 @@ async def list_conversations(db: Session = Depends(get_db)):
 
 @app.get('/messages/conversations/{conversation_id}', tags=['Messages'], summary="Get conversation by ID", response_model=schemas.Conversation)
 async def read_conversation(conversation_id: int, db: Session = Depends(get_db)):
-    msgs = []
-    msgs = messenger_repo.get_messages_by_conv_id(db, conversation_id)
-    if not msgs:
-        raise HTTPException(status_code=404, detail='Conversation not found')
+    return messenger_repo.get_conversation_by_conv_id(db, conversation_id)  
+    # if not msgs:
+    #     raise HTTPException(status_code=404, detail='Conversation not found')
     # for msg in msgs:
     #     print(msg.content)
-    return msgs
+    # return msgs
 
 
 @app.put('/messages/conversations/{conversation_id}', tags=['Messages'], summary="Update conversation by ID", response_model=schemas.Conversation)
@@ -542,11 +541,11 @@ async def list_user_messages(user_id: int, db: Session = Depends(get_db)):
 # Conversation Participants CRUD
 @app.post('/messages/participants/', tags=['Messages'], summary="Add a participant to a conversation", response_model=schemas.Conversation_Participant)
 async def add_participant(participant: schemas.Conversation_Participant, db: Session = Depends(get_db)):
-    
+    return messenger_repo.add_conversation_participant(db, participant)
 
 @app.get('/messages/participants/conversation/{conversation_id}', tags=['Messages'], summary="Get all participants of a conversation", response_model=list[schemas.Conversation_Participant])
 async def list_conversation_participants(conversation_id: int, db: Session = Depends(get_db)):
-    pass
+    return messenger_repo.get_conversation_participants(db, conversation_id)
 
 # @app.post('/post_test')
 # async def post_test(post:schemas.Post_Create_Update,db:Session=Depends(get_db)):

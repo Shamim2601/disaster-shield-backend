@@ -1,11 +1,7 @@
 import models, schemas
 from sqlalchemy.orm import Session, join
 
-def create_conversation(db:Session,db_conversation:models.Conversation):
-    db.add(db_conversation)
-    db.commit()
-    db.refresh(db_conversation)
-    return db_conversation
+
 
 def get_conversation_by_user_id(db:Session,user_id:int):
     return db.query(models.Conversation).join(models.Conversation_participant).filter(models.Conversation_participant.participant_id==user_id).all()
@@ -31,12 +27,19 @@ def get_message_by_message_id(db:Session,message_id:int):
 
 def get_conversation_participants(db:Session,conversation_id:int):
     return db.query(models.User).join(models.Conversation_participant).filter(models.Conversation_participant.conversation_id==conversation_id).all()
+##please check this above function wheather the joining is correct or not
+
 
 
 def get_participants_by_message_id(db:Session, mesage_id:int):
     convo = get_conversation_by_message_id(db,mesage_id)
     return get_conversation_participants(db,convo.conversation_id)
 
+def create_conversation(db:Session,db_conversation:models.Conversation):
+    db.add(db_conversation)
+    db.commit()
+    db.refresh(db_conversation)
+    return db_conversation
 
 def update_conversaion(db:Session,conversation_id:int,conversation:schemas.Conversation_Update):
     values=conversation.dict(exclude_unset=True)

@@ -118,6 +118,10 @@ class Message(Base):
     sender_id = Column(Integer(), ForeignKey("users.user_id"), nullable=False)
     conversation_id = Column(Integer(), ForeignKey("conversations.conversation_id"), nullable=False)
     
+##Shouldn't there be a created_at column? Please check
+##Every message should have a timestamp attached to it for relavanace
+##if yes, then we need to modify send message funcion in main.py
+
     sender = relationship("User",back_populates="messages")  # Assuming you have a User class
     conversation = relationship("Conversation", back_populates="messages")
 
