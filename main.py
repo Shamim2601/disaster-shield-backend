@@ -478,11 +478,10 @@ async def delete_missing_person_image(
   
     
 # Conversation CRUD
-@app.post('/messages/conversations/', tags=['Messages'], summary="Create a new conversation", response_model=schemas.Conversation)
+@app.post('/messages/conversations/', tags=['Messages'], summary="Create a new conversation" )#, response_model=schemas.Conversation)
 # async def create_conversation(conversation: schemas.Conversation_Create, db: Session = Depends(get_db)):
 # crnt_user:Annotated[models.User, Depends(get_current_user)], /
-async def create_conversation(conversation: schemas.Conversation_Create, crnt_user:Annotated[models.User, Depends(get_current_user)], /
-    db: Session = Depends(get_db)):
+async def create_conversation(conversation: schemas.Conversation_Create, crnt_user:Annotated[models.User, Depends(get_current_user)],db: Session = Depends(get_db)):
     # db_is_group = conversation.is_group
     # if db_is_group == False:
     #     db_participants = conversation.participants
@@ -490,13 +489,16 @@ async def create_conversation(conversation: schemas.Conversation_Create, crnt_us
     #         raise HTTPException(status_code=400, detail='A conversation between two people must have two participants')
     creation_time = int(round(datetime.now().timestamp()))
     db_conversation = models.Conversation(**conversation.dict(), created_at = creation_time)
-    db_conversation_participant = models.Conversation_Participant(conversation_id = db_conversation.conversation_id, participant_id = crnt_user.user_id, is_creator = True)
-    messenger_repo.add_conversation_participant(db, db_conversation_participant) ##Is it correct for our model? Need opinion.   
-    return messenger_repo.create_conversation(db, db_conversation)
+    messenger_repo.create_conversation(db, db_conversation)
+    db_conversation_participant = models.Conversation_Participant(participant_id = crnt_user.user_id,\
+        conversation_id=db_conversation.conversation_id,is_creator=True)
+    messenger_repo.add_conversation_participant(db,db_conversation_participant)
+    # print(db_conversation.conversation_id)
+    return messenger_repo.get_conversation_by_conv_id(db,db_conversation.conversation_id)
 
 
 
-@app.get('/messages/conversations/', tags=['Messages'], summary="Get a list of conversations", response_model=list[schemas.Conversation])
+@app.get('/messages/conversations/', tags=['Messages'], summary="Get a list of conversations" , response_model=list[schemas.Conversation])
 async def list_conversations(db: Session = Depends(get_db)):
     return messenger_repo.get_all_conversations(db)
 
@@ -509,25 +511,24 @@ async def read_conversation(conversation_id: int, db: Session = Depends(get_db))
     #     print(msg.content)
     # return msgs
 
-
+# TODO:  fix update conversation. add authorization
 @app.put('/messages/conversations/{conversation_id}', tags=['Messages'], summary="Update conversation by ID", response_model=schemas.Conversation)
 async def update_conversation(conversation_id: int, conversation: schemas.Conversation_Update, db: Session = Depends(get_db)):
     db_conversation = messenger_repo.get_conversation_by_conv_id(db, conversation_id)
     if not db_conversation:
         raise HTTPException(status_code=404, detail='Conversation not found')
-    return messenger_repo.update_conversation(db, conversation_id, conversation)  ##will it delete the values of columns that is not in the Conversation_update class??  
+    
+    return messenger_repo.update_conversaion(db,conversation_id,conversation)    
 
 # Message CRUD
 @app.post('/messages/', tags=['Messages'], summary="Send a new message", response_model=schemas.Message)
-async def send_message( conversation_ID: int, message: schemas.Message_Create, crnt_user:Annotated[models.User, Depends(get_current_user)], /
-    db: Session = Depends(get_db)):
+async def send_message( conversation_ID: int, message: schemas.Message_Create, crnt_user:Annotated[models.User, Depends(get_current_user)],db: Session = Depends(get_db)):
     # current_user = get_current_user(message.token, db)
     db_message = models.Message(**message.dict(), sender_id = crnt_user.user_id, conversation_id = conversation_ID)
     return messenger_repo.send_message(db, db_message)
 
 @app.put('/messages/{message_id}', tags=['Messages'], summary="Edit a message by ID", response_model=schemas.Message)
-async def edit_message(message_id: int, message: schemas.Message_Update, crnt_user:Annotated[models.User, Depends(get_current_user)], /
-    db: Session = Depends(get_db)):
+async def edit_message(message_id: int, message: schemas.Message_Update, crnt_user:Annotated[models.User, Depends(get_current_user)],db: Session = Depends(get_db)):
     # current_user = get_current_user(message.token, db)
     if (crnt_user.user_id != message.sender_id):
         raise HTTPException(status_code=401, detail='You cannot edit other people\'s messages')
@@ -554,6 +555,7 @@ async def list_conversation_participants(conversation_id: int, db: Session = Dep
 # @app.get('/all_posts_test')
 # async def post_all(db:Session=Depends(get_db)):
 #     return user_repo.get_all_posts(db)
+
 
 if __name__=="__main__":
     uvicorn.run("main:app",port=4001,reload=True,host="0.0.0.0")

@@ -62,7 +62,7 @@ def update_message(db:Session, message_id:int, message:schemas.Message_Update):
     db.commit()
     return get_message_by_message_id(db,message_id)
 
-def add_conversation_participant(db:Session,db_conversation_participant:models.Conversation_participant):
+def add_conversation_participant(db:Session,db_conversation_participant:models.Conversation_Participant):
     db.add(db_conversation_participant)
     db.commit()
     db.refresh(db_conversation_participant)

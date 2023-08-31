@@ -108,8 +108,8 @@ class Conversation(Base):
     is_group = Column(Boolean(), nullable=False)
     title = Column(String(100), nullable=False)
     
-    messages = relationship("Message", back_populates="conversation")
-    participants = relationship("Conversation_Participant", back_populates="conversation")
+    messages = relationship("Message", back_populates="conversation",lazy=False)
+    participants = relationship("Conversation_Participant", back_populates="conversation",lazy=False)
 
 class Message(Base):
     __tablename__ = "messages"
@@ -118,10 +118,8 @@ class Message(Base):
     sender_id = Column(Integer(), ForeignKey("users.user_id"), nullable=False)
     conversation_id = Column(Integer(), ForeignKey("conversations.conversation_id"), nullable=False)
     
-##Shouldn't there be a created_at column? Please check
-##Every message should have a timestamp attached to it for relavanace
-##if yes, then we need to modify send message funcion in main.py
-
+    sent_at = Column(Integer(),nullable=False)
+    
     sender = relationship("User",back_populates="messages")  # Assuming you have a User class
     conversation = relationship("Conversation", back_populates="messages")
 

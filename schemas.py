@@ -215,15 +215,20 @@ class Message(Message_Base):
     message_id: int = Field(..., description="Unique ID of the message")
     sender_id: int = Field(..., description="ID of the message sender")
     conversation_id: int = Field(..., description="ID of the conversation")
-    
+    sent_at:int
     class Config:
         orm_mode = True 
- 
+
+class Conversation_Participant_Create(BaseModel):
+    is_creator:bool
+    
+    
 
 class Conversation_Participant(BaseModel):
     participant_id: int = Field(..., description="Unique ID of the participant entry")
     conversation_id: int = Field(..., description="ID of the conversation")
-    is_creator:bool
+    
+    participant:User_Out
     class Config:
         orm_mode = True
  
@@ -241,7 +246,7 @@ class Conversation_Update(Conversation_Base):
 class Conversation(Conversation_Create):
     conversation_id: int = Field(..., description="Unique ID of the conversation")
     created_at: int = Field(..., description="Timestamp of conversation creation")
-    messages:list[Message]=Field([])
+    messages:list[Message] = Field(...)
     participants:list[Conversation_Participant]
     class Config:
         orm_mode = True
@@ -263,6 +268,6 @@ class Post_Comment(Post_Comment_Base):
     post_id: int
     created_at: int
     image:Image|None
-    commenter_id:User
+    commenter:User
     class Config:
         orm_mode = True
