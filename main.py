@@ -17,6 +17,7 @@ from database import SessionLocal, engine
 from datetime import timedelta,datetime
 from jose import JWTError,jwt
 from image_service import image_service
+from weather_service import weather_service
 
 
 load_dotenv()
@@ -315,6 +316,14 @@ async def report_post(post_id: int,\
 
     return post_repo.submit_post_report(db, post_id, current_user.user_id, report_reason) 
 
+@app.get('/post_reports',tags=['Posts'],summary="Get All Post Reports",response_model=list[schemas.Post_Report])
+async def get_post_reports(current_user: Annotated[models.User, Depends(get_current_user)],\
+    db:Session=Depends(get_db)):
+    
+    if current_user.is_admin == False:
+        raise HTTPException(status_code=403,detail='Unauthorized')
+    return post_repo.get_all_post_reports(db)
+
 # TODO make upload File Optional
 @app.post('/posts/{post_id}/comment', tags=['Posts'], summary="Add a comment")#response_model=schemas.Post_Comment)
 async def add_comment_to_post(post_id: int, 
@@ -475,6 +484,7 @@ async def delete_missing_person_image(
     db.delete(db_image)
     db.commit()
 
+
   
     
 # Conversation CRUD
@@ -555,6 +565,19 @@ async def list_conversation_participants(conversation_id: int, db: Session = Dep
 # @app.get('/all_posts_test')
 # async def post_all(db:Session=Depends(get_db)):
 #     return user_repo.get_all_posts(db)
+
+# Weather API
+
+@app.get('/weather',tags=['Weather'])#,response_model=schemas.Weather)
+async def get_weather_info(crnt_user:Annotated[models.User, Depends(get_current_user)],\
+    db: Session = Depends(get_db)):
+    # print(crnt_user.longitude)
+    # print(crnt_user.latitude)
+    # print(crnt_user.latitude and crnt_user.longitude)
+    if  (crnt_user.latitude and crnt_user.longitude) == None:
+        raise HTTPException(status_code=404,detail='User does not have location set')
+    return weather_service.get_current_weather(crnt_user.latitude,crnt_user.longitude)
+
 
 
 if __name__=="__main__":

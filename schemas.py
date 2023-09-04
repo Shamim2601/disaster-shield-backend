@@ -271,3 +271,48 @@ class Post_Comment(Post_Comment_Base):
     commenter:User
     class Config:
         orm_mode = True
+
+
+# Weather models
+
+class Us_Epa_Index(str,Enum):
+    Good = "Good"
+    Moderate = "Moderate"
+    Unhealthy_Sensitive = "Unhealthy for sensitive group"
+    Unhealthy = "Unhealthy"
+    Very_Unhealthy="Very Unhealthy"
+    Hazardous = "Hazardous"
+
+
+
+class Location(BaseModel):
+    name:str
+    country:str
+    localtime_epoch:int # in seconds
+    localtime:str
+
+class Air_Quality(BaseModel):
+    co:float
+    o3:float
+    no2:float
+    so2:float
+    pm2_5:float
+    pm10:float
+    us_epa_index:Us_Epa_Index
+    
+
+class Weather_Condition(BaseModel):
+    icon:str
+    text:str
+
+class Weather(BaseModel):
+    temp_c:float
+    condition:Weather_Condition
+    humidity:int
+    feelslike_c:float
+    wind_kph:float
+    pressure_mb:float
+    is_day:int
+    air_quality:Air_Quality
+    location:Location
+    
