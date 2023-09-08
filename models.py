@@ -108,7 +108,7 @@ class Conversation(Base):
     is_group = Column(Boolean(), nullable=False)
     title = Column(String(100)) # can be nullable if is_group is False
     
-    messages = relationship("Message", back_populates="conversation",lazy=False)
+    messages = relationship("Message", back_populates="conversation",lazy=False,order_by='asc(Message.sent_at)')
     participants = relationship("Conversation_Participant", back_populates="conversation",lazy=False)
 
 class Message(Base):
