@@ -125,7 +125,7 @@ async def get_current_user(token:Annotated[str,Depends(oauth2_scheme)],db:Sessio
 async def send_current_user(current_user:Annotated[models.User,Depends(get_current_user)]):
     return current_user
 
-@app.get('/user/exists',tags=['Users'],summary='Check if user with username exists',response_model=bool)
+@app.get('/users/exists',tags=['Users'],summary='Check if user with username exists',response_model=bool)
 async def check_username_exists(username:str,db:Session=Depends(get_db)):
     db_user = user_repo.get_user_by_username(db,username)
     if db_user:
