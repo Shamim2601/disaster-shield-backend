@@ -151,7 +151,7 @@ async def upload_user_image(user_id:int,file:UploadFile,\
     image_repo.add_image_to_user(current_user.user_id,image,db)
     return image    
 
-@app.post('/users/', tags=['Users'], summary="Create a new user", response_model=schemas.User_Out)
+@app.post('/users', tags=['Users'], summary="Create a new user", response_model=schemas.User_Out)
 async def create_user(user: schemas.User_Create, db: Session = Depends(get_db)):
     db_user=user_repo.get_user_by_username(db,user.username)
     if db_user:
@@ -161,7 +161,7 @@ async def create_user(user: schemas.User_Create, db: Session = Depends(get_db)):
     db_user=models.User(**user.dict(exclude=['password']),hashed_password=hashed_password,is_admin=is_admin)
     return user_repo.create_user(db,db_user)
 
-@app.get('/users/', tags=['Users'], summary="Get a list of users", response_model=list[schemas.User_Out])
+@app.get('/users', tags=['Users'], summary="Get a list of users", response_model=list[schemas.User_Out])
 async def list_users(db: Session = Depends(get_db)):
     return user_repo.get_all_users(db)
 
