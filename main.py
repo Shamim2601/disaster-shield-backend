@@ -157,7 +157,7 @@ async def create_user(user: schemas.User_Create, db: Session = Depends(get_db)):
     if db_user:
         raise HTTPException(status_code=400,detail='username is taken')
     hashed_password=get_password_hash(user.password)
-    is_admin=True   
+    is_admin=False   
     db_user=models.User(**user.dict(exclude=['password']),hashed_password=hashed_password,is_admin=is_admin)
     return user_repo.create_user(db,db_user)
 
