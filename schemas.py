@@ -314,4 +314,30 @@ class Weather(BaseModel):
     is_day:int
     air_quality:Air_Quality
     location:Location
+
+class Service_Type(str,Enum):
+    shelter="shelter"
+    police="police"
+    firestation="firestation"
+    medical="medical"
+
+class Service_Base(BaseModel):
+    service_type:Service_Type
+    title:str=Field(...,max_length=100)
+    latitude:float
+    longitude:float
+    details:str|None=Field(None,max_length=500)
+
+class Service_Create(Service_Base):
+    pass
+
+class Service_Update(Service_Base):
+    pass
+
+class Service(Service_Base):
+    service_id:int
+    
+    class Config:
+        orm_mode=True    
+    
     

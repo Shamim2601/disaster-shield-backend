@@ -176,3 +176,14 @@ class Post_Comment(Base):
     commenter = relationship("User", back_populates="comments")
     post = relationship("Post", back_populates="comments")
     image = relationship("Image", back_populates="comment")
+
+class Service(Base):
+    __tablename__ = "services"
+    service_id = Column(Integer(), primary_key=True, autoincrement=True)
+    service_type = Column(String(20), CheckConstraint("service_type IN ('firestation', 'police', 'shelter', 'medical')"), nullable=False)
+    title = Column(String(100), nullable=False)
+    latitude = Column(Float(), nullable=False)
+    longitude = Column(Float(), nullable=False)
+    details = Column(String(500), nullable=True)
+    
+    
