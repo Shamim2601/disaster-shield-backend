@@ -106,7 +106,7 @@ class Conversation(Base):
     conversation_id = Column(Integer(), primary_key=True, autoincrement=True)
     created_at = Column(Integer(), nullable=False)
     is_group = Column(Boolean(), nullable=False)
-    title = Column(String(100), nullable=False)
+    title = Column(String(100)) # can be nullable if is_group is False
     
     messages = relationship("Message", back_populates="conversation",lazy=False)
     participants = relationship("Conversation_Participant", back_populates="conversation",lazy=False)

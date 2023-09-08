@@ -184,7 +184,7 @@ async def update_user(user_id: int, user: schemas.User_Update, crnt_usr: Annotat
 
 
 # Post CRUD
-@app.post('/posts/', tags=['Posts'], summary="Create a new post", response_model=schemas.Post)
+@app.post('/posts', tags=['Posts'], summary="Create a new post", response_model=schemas.Post)
 async def create_post(post: schemas.Post_Create,user:Annotated[models.User,Depends(get_current_user)], \
     db: Session = Depends(get_db)):
     
@@ -193,7 +193,7 @@ async def create_post(post: schemas.Post_Create,user:Annotated[models.User,Depen
     return post_repo.create_post(db,post,user)
     pass
 
-@app.get('/posts/', tags=['Posts'], summary="Get a list of posts", response_model=list[schemas.Post])
+@app.get('/posts', tags=['Posts'], summary="Get a list of posts", response_model=list[schemas.Post])
 async def list_posts(db: Session = Depends(get_db)):
     return post_repo.get_all_posts(db)
 
@@ -224,7 +224,8 @@ async def upload_post_images(post_id:int,file:UploadFile,\
          raise HTTPException(status_code=404,detail='post not found')
     if current_user.user_id!=db_post.creator_id:
         raise HTTPException(status_code=401,detail='Unauthorized')
-    if file.content_type!='image/jpeg':
+    
+    if not file.content_type in allowed_image_types:
         raise HTTPException(status_code=400,detail='Image Format Not Supported')
     
             
@@ -362,7 +363,7 @@ async def add_comment_to_post(post_id: int,
 
 # Disaster CRUD
 
-@app.post('/disasters/', tags=['Disasters'], summary="Create a new disaster", response_model=schemas.Disaster)
+@app.post('/disasters', tags=['Disasters'], summary="Create a new disaster", response_model=schemas.Disaster)
 async def create_disaster(disaster: schemas.Disaster_Create, crnt_usr: Annotated[models.User, Depends(get_current_user)], \
     db: Session = Depends(get_db)):
     if crnt_usr.is_admin==False:
@@ -378,7 +379,7 @@ async def create_disaster(disaster: schemas.Disaster_Create, crnt_usr: Annotated
     db_disaster=models.Disaster(**disaster.dict(),info_creation_time = creation_time, info_creator_id = creator_id)
     return disaster_repo.create_disaster(db,db_disaster)
 
-@app.get('/disasters/', tags=['Disasters'], summary="Get a list of disasters", response_model=list[schemas.Disaster])
+@app.get('/disasters', tags=['Disasters'], summary="Get a list of disasters", response_model=list[schemas.Disaster])
 async def list_disasters(db: Session = Depends(get_db)):
     return disaster_repo.get_all_disasters(db)
 
@@ -409,7 +410,7 @@ async def update_disaster(disaster_id: int, disaster: schemas.Disaster_Update,cr
 
 
 # Missing Person CRUD
-@app.post('/missing/', tags=['Missing Person'], summary="Create a new missing person report",response_model=schemas.Missing_Person)
+@app.post('/missing', tags=['Missing Person'], summary="Create a new missing person report",response_model=schemas.Missing_Person)
 async def create_missing(missing: schemas.Missing_Person_Create,
     current_user:Annotated[models.User, Depends(get_current_user)],\
     db: Session = Depends(get_db)):
@@ -419,7 +420,7 @@ async def create_missing(missing: schemas.Missing_Person_Create,
             raise HTTPException(status_code=404, detail='Disaster not found')
     return missing_repo.create_missing_person(db,missing,current_user)
 
-@app.get('/missing/', tags=['Missing Person'], summary="Get a list of missing persons", response_model=list[schemas.Missing_Person])
+@app.get('/missing', tags=['Missing Person'], summary="Get a list of missing persons", response_model=list[schemas.Missing_Person])
 async def list_missing_persons(db: Session = Depends(get_db)):
     return missing_repo.get_all_missing_persons(db)
 
@@ -488,54 +489,103 @@ async def delete_missing_person_image(
   
     
 # Conversation CRUD
-@app.post('/messages/conversations/', tags=['Messages'], summary="Create a new conversation" )#, response_model=schemas.Conversation)
-# async def create_conversation(conversation: schemas.Conversation_Create, db: Session = Depends(get_db)):
-# crnt_user:Annotated[models.User, Depends(get_current_user)], /
-async def create_conversation(conversation: schemas.Conversation_Create, crnt_user:Annotated[models.User, Depends(get_current_user)],db: Session = Depends(get_db)):
-    # db_is_group = conversation.is_group
-    # if db_is_group == False:
-    #     db_participants = conversation.participants
-    #     if len(db_participants) != 2:
-    #         raise HTTPException(status_code=400, detail='A conversation between two people must have two participants')
+@app.post('/messages/conversations/binary', tags=['Messages'], summary="Create a Binary conversation" , response_model=schemas.Conversation)
+async def create_conversation(receiver_user_id:int,conversation: Annotated[schemas.Conversation_Create,Body(...)],\
+    crnt_user:Annotated[models.User, Depends(get_current_user)],db: Session = Depends(get_db)):
+    
+    if crnt_user.user_id == receiver_user_id:
+        raise HTTPException(status_code=400, detail='Cannot create conversation with yourself')
+    
+    receiver_user = user_repo.get_user_by_id(db,receiver_user_id)
+    if not receiver_user:
+        raise HTTPException(status_code=404, detail='Receiver user not found')
+    
+    existing_conversation =  messenger_repo.get_binary_conversation(db,crnt_user.user_id,receiver_user_id)
+    if existing_conversation != None:
+        raise HTTPException(status_code=400, detail='Conversation already exists')
+    
     creation_time = int(round(datetime.now().timestamp()))
-    db_conversation = models.Conversation(**conversation.dict(), created_at = creation_time)
-    messenger_repo.create_conversation(db, db_conversation)
-    db_conversation_participant = models.Conversation_Participant(participant_id = crnt_user.user_id,\
-        conversation_id=db_conversation.conversation_id,is_creator=True)
-    messenger_repo.add_conversation_participant(db,db_conversation_participant)
-    # print(db_conversation.conversation_id)
-    return messenger_repo.get_conversation_by_conv_id(db,db_conversation.conversation_id)
+    db_conversation = models.Conversation(created_at = creation_time,is_group=False)
+    db_conversation = messenger_repo.create_conversation(db,db_conversation)
+    
+    conv_participant1 = models.Conversation_Participant(participant_id = crnt_user.user_id,is_creator=True,conversation_id=db_conversation.conversation_id)
+    conv_participant2 = models.Conversation_Participant(participant_id = receiver_user_id,is_creator=False,conversation_id=db_conversation.conversation_id)
+    
+    messenger_repo.add_conversation_participant(db,conv_participant1)
+    messenger_repo.add_conversation_participant(db,conv_participant2)
+    
+    # db.refresh(db_conversation)
+    return db_conversation
 
+@app.post('/messages/conversations/group', tags=['Messages'], summary="Create a Group conversation" , response_model=schemas.Conversation)
+async def create_conversation(conversation: Annotated[schemas.Conversation_Create,Body(...)],\
+    user_id_list: Annotated[list[int],Body(...)],crnt_user:Annotated[models.User, Depends(get_current_user)],db: Session = Depends(get_db)):
+    if len(user_id_list) < 1:
+        raise HTTPException(status_code=400, detail='Group conversation must have at least 2 participants')
+    for i in user_id_list:
+        if i == crnt_user.user_id:
+            raise HTTPException(status_code=400, detail='Cannot create conversation with yourself')
+        if user_repo.get_user_by_id(db,i) == None:
+            raise HTTPException(status_code=404, detail='User not found')
+    creation_time = int(round(datetime.now().timestamp()))
+    db_conversation = models.Conversation(created_at = creation_time,is_group=True,title=conversation.title)
+    db_conversation =  messenger_repo.create_conversation(db,db_conversation)
+    
+    for i in user_id_list:
+        conv_participant = models.Conversation_Participant(participant_id = i,is_creator=False,conversation_id=db_conversation.conversation_id)
+        messenger_repo.add_conversation_participant(db,conv_participant)
+    conv_participant = models.Conversation_Participant(participant_id = crnt_user.user_id,is_creator=True,conversation_id=db_conversation.conversation_id)
+    messenger_repo.add_conversation_participant(db,conv_participant)
 
+    return db_conversation
 
-@app.get('/messages/conversations/', tags=['Messages'], summary="Get a list of conversations" , response_model=list[schemas.Conversation])
+@app.get('/messages/conversations', tags=['Messages'], summary="Get a list of conversations" , response_model=list[schemas.Conversation])
 async def list_conversations(db: Session = Depends(get_db)):
     return messenger_repo.get_all_conversations(db)
 
+@app.get('/messages/conversations/my', tags=['Messages'], summary="Get a list of my conversations" , response_model=list[schemas.Conversation])
+async def list_user_conversations(crnt_user:Annotated[models.User, Depends(get_current_user)],db: Session = Depends(get_db)):
+    return messenger_repo.get_conversations_by_user_id(db,crnt_user.user_id)
+
 @app.get('/messages/conversations/{conversation_id}', tags=['Messages'], summary="Get conversation by ID", response_model=schemas.Conversation)
 async def read_conversation(conversation_id: int, db: Session = Depends(get_db)):
-    return messenger_repo.get_conversation_by_conv_id(db, conversation_id)  
-    # if not msgs:
-    #     raise HTTPException(status_code=404, detail='Conversation not found')
-    # for msg in msgs:
-    #     print(msg.content)
-    # return msgs
+    db_conv = messenger_repo.get_conversation_by_conv_id(db, conversation_id)  
+    if db_conv == None:
+        raise HTTPException(status_code=404, detail='Conversation not found')
+    return db_conv
 
 # TODO:  fix update conversation. add authorization
 @app.put('/messages/conversations/{conversation_id}', tags=['Messages'], summary="Update conversation by ID", response_model=schemas.Conversation)
-async def update_conversation(conversation_id: int, conversation: schemas.Conversation_Update, db: Session = Depends(get_db)):
+async def update_conversation(conversation_id: int, conversation: schemas.Conversation_Update,\
+    crnt_user:Annotated[models.User, Depends(get_current_user)],db: Session = Depends(get_db)):
+    
     db_conversation = messenger_repo.get_conversation_by_conv_id(db, conversation_id)
     if not db_conversation:
         raise HTTPException(status_code=404, detail='Conversation not found')
     
+    if db_conversation.is_group == False:
+        raise HTTPException(status_code=400, detail='Cannot update a binary conversation')
+    
+    db_participant = messenger_repo.get_conversation_participant(db,conversation_id,crnt_user.user_id)
+    
+    if not db_participant:
+        raise HTTPException(status_code=401, detail='You are not part of this conversation')
+    
+    elif db_participant.is_creator == False:
+        raise HTTPException(status_code=401, detail='You are not the creator of this conversation')
+    
     return messenger_repo.update_conversaion(db,conversation_id,conversation)    
 
 # Message CRUD
-@app.post('/messages/', tags=['Messages'], summary="Send a new message", response_model=schemas.Message)
-async def send_message( conversation_ID: int, message: schemas.Message_Create, crnt_user:Annotated[models.User, Depends(get_current_user)],db: Session = Depends(get_db)):
+@app.post('/messages', tags=['Messages'], summary="Send a new message", response_model=schemas.Message)
+async def send_message( conversation_id: int, message: schemas.Message_Create, crnt_user:Annotated[models.User, Depends(get_current_user)],db: Session = Depends(get_db)):
     # current_user = get_current_user(message.token, db)
-    db_message = models.Message(**message.dict(), sender_id = crnt_user.user_id, conversation_id = conversation_ID)
-    return messenger_repo.send_message(db, db_message)
+    db_participant = messenger_repo.get_conversation_participant(db,conversation_id,crnt_user.user_id)
+    if not db_participant:
+        raise HTTPException(status_code=401, detail='You are not part of this conversation')
+    sent_at = int(round(datetime.now().timestamp()))
+    db_message = models.Message(**message.dict(), sender_id = crnt_user.user_id, conversation_id = conversation_id,sent_at = sent_at)
+    return messenger_repo.create_message(db, db_message)
 
 @app.put('/messages/{message_id}', tags=['Messages'], summary="Edit a message by ID", response_model=schemas.Message)
 async def edit_message(message_id: int, message: schemas.Message_Update, crnt_user:Annotated[models.User, Depends(get_current_user)],db: Session = Depends(get_db)):
@@ -545,18 +595,43 @@ async def edit_message(message_id: int, message: schemas.Message_Update, crnt_us
     db_message = messenger_repo.get_message_by_message_id(db, message_id)
     return messenger_repo.update_message(db, message_id, message) ##will it delete the value of sender column in the message database??
 
-@app.get('/messages/user/{user_id}', tags=['Messages'], summary="Get all messages of a user", response_model=list[schemas.Message])
-async def list_user_messages(user_id: int, db: Session = Depends(get_db)):
-    pass
+# @app.get('/messages/user/{user_id}', tags=['Messages'], summary="Get all messages of a user", response_model=list[schemas.Message])
+# async def list_user_messages(user_id: int, db: Session = Depends(get_db)):
+#     pass
 
 # Conversation Participants CRUD
-@app.post('/messages/participants/', tags=['Messages'], summary="Add a participant to a conversation", response_model=schemas.Conversation_Participant)
-async def add_participant(participant: schemas.Conversation_Participant, db: Session = Depends(get_db)):
-    return messenger_repo.add_conversation_participant(db, participant)
+@app.post('/messages/participants', tags=['Messages'], summary="Add a participant to a conversation", response_model=schemas.Conversation_Participant)
+async def add_participant(participant_id:int,conversation_id:int, \
+    crnt_user:Annotated[models.User, Depends(get_current_user)],db: Session = Depends(get_db)):
+    
+    if participant_id == crnt_user.user_id:
+        raise HTTPException(status_code=400, detail='You cannot add yourself to a conversation')
+    
+    db_user = user_repo.get_user_by_id(db,participant_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail='User not found')
+    
+    db_conversation = messenger_repo.get_conversation_by_conv_id(db, conversation_id)
+    if not db_conversation:
+        raise HTTPException(status_code=404, detail='Conversation not found')
+    if db_conversation.is_group == False:
+        raise HTTPException(status_code=400, detail='Cannot add a participant to a binary conversation')
+    
+    db_participant = messenger_repo.get_conversation_participant(db,conversation_id,crnt_user.user_id)
+    if not db_participant:
+        raise HTTPException(status_code=401, detail='You are not part of this conversation')
+    # if db_participant.is_creator == False:
+    #     raise HTTPException(status_code=401, detail='You are not the creator of this conversation')
+    
+    db_participant = messenger_repo.get_conversation_participant(db,conversation_id,participant_id)
+    if db_participant:
+        raise HTTPException(status_code=400, detail='Participant already exists')
+    db_participant = models.Conversation_Participant(participant_id = participant_id,conversation_id = conversation_id,is_creator = False)
+    return messenger_repo.add_conversation_participant(db,db_participant)
 
-@app.get('/messages/participants/conversation/{conversation_id}', tags=['Messages'], summary="Get all participants of a conversation", response_model=list[schemas.Conversation_Participant])
-async def list_conversation_participants(conversation_id: int, db: Session = Depends(get_db)):
-    return messenger_repo.get_conversation_participants(db, conversation_id)
+# @app.get('/messages/participants/conversation/{conversation_id}', tags=['Messages'], summary="Get all participants of a conversation", response_model=list[schemas.Conversation_Participant])
+# async def list_conversation_participants(conversation_id: int, db: Session = Depends(get_db)):
+#     return messenger_repo.get_conversation_participants(db, conversation_id)
 
 # @app.post('/post_test')
 # async def post_test(post:schemas.Post_Create_Update,db:Session=Depends(get_db)):

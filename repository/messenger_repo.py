@@ -1,10 +1,11 @@
 import models, schemas
-from sqlalchemy.orm import Session, join
+from sqlalchemy.orm import Session, join,selectinload,lazyload
+from sqlalchemy.sql import text
 
 
 
-def get_conversation_by_user_id(db:Session,user_id:int):
-    return db.query(models.Conversation).join(models.Conversation_participant).filter(models.Conversation_participant.participant_id==user_id).all()
+def get_conversations_by_user_id(db:Session,user_id:int):
+    return db.query(models.Conversation).join(models.Conversation_Participant).filter(models.Conversation_Participant.participant_id==user_id).all()
 
 def get_conversation_by_conv_id(db:Session,conversation_id:int):
     return db.query(models.Conversation).filter(models.Conversation.conversation_id==conversation_id).first()
@@ -15,6 +16,41 @@ def get_all_conversations(db:Session):
 def get_conversation_by_message_id(db:Session,message_id:int):
     return db.query(models.Conversation).join(models.Message).filter(models.Message.message_id==message_id).first()
 
+def get_conversation_participant(db:Session,conversation_id:int,user_id:int):
+    return db.query(models.Conversation_Participant).filter(models.Conversation_Participant.conversation_id==conversation_id).filter(models.Conversation_Participant.participant_id==user_id).first()
+
+
+# def get_binary_conversation(db:Session,user_id1:int,user_id2:int):
+#      return db.query(models.Conversation.conversation_id)\
+#     .filter(models.Conversation.is_group == False)\
+#     .filter(
+#         db.query(models.Conversation_Participant)\
+#         .filter(models.Conversation_Participant.participant_id.in_([user_id1, user_id2]))\
+#         .join(models.Conversation,models.Conversation_Participant.conversation_id == models.Conversation.conversation_id)
+#         .count() == 2
+#     ).first()
+
+# returns conversation_id of binary conversation between user_id1 and user_id2 or None if no such conversation exists
+def get_binary_conversation(db:Session,user_id1:int,user_id2:int)->int|None:
+    statement = text("""
+    SELECT CS.CONVERSATION_ID
+    FROM CONVERSATIONS CS
+    WHERE CS.IS_GROUP = FALSE
+    AND (
+    SELECT COUNT(*)
+    FROM CONVERSATION_PARTICIPANTS CP
+    WHERE CP.CONVERSATION_ID = CS.CONVERSATION_ID
+      AND CP.PARTICIPANT_ID IN (:u1, :u2)
+    ) = 2;
+    """)
+    # execute query and return result
+    output = db.execute(statement,{'u1':user_id1,'u2':user_id2}).first()
+    if output == None:
+        return None
+    return output[0]
+    # dict_output = {'conversation_id':output[0],'title':output[1],'is_group':output[2],'created_at':output[3]}
+    # return models.Conversation(**dict_output)
+    
 
 
 def get_messages_by_conv_id(db:Session,conversation_id:int):
@@ -26,7 +62,7 @@ def get_message_by_message_id(db:Session,message_id:int):
 
 
 def get_conversation_participants(db:Session,conversation_id:int):
-    return db.query(models.User).join(models.Conversation_participant).filter(models.Conversation_participant.conversation_id==conversation_id).all()
+    return db.query(models.User).join(models.Conversation_Participant).filter(models.Conversation_Participant.conversation_id==conversation_id).all()
 ##please check this above function wheather the joining is correct or not
 
 
@@ -49,7 +85,7 @@ def update_conversaion(db:Session,conversation_id:int,conversation:schemas.Conve
     return get_conversation_by_conv_id(db,conversation_id)
 
 
-def send_message(db:Session,db_message:models.Message):
+def create_message(db:Session,db_message:models.Message):
     db.add(db_message)
     db.commit()
     db.refresh(db_message)

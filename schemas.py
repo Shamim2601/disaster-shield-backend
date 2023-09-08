@@ -213,20 +213,19 @@ class Message_Update(Message_Base):
 
 class Message(Message_Base):
     message_id: int = Field(..., description="Unique ID of the message")
-    sender_id: int = Field(..., description="ID of the message sender")
+    #sender_id: int = Field(..., description="ID of the message sender")
     conversation_id: int = Field(..., description="ID of the conversation")
     sent_at:int
+    sender:User_Out
     class Config:
         orm_mode = True 
 
-class Conversation_Participant_Create(BaseModel):
-    is_creator:bool
-    
     
 
 class Conversation_Participant(BaseModel):
-    participant_id: int = Field(..., description="Unique ID of the participant entry")
+    #participant_id: int = Field(..., description="Unique ID of the participant entry")
     conversation_id: int = Field(..., description="ID of the conversation")
+    is_creator:bool
     
     participant:User_Out
     class Config:
@@ -234,10 +233,9 @@ class Conversation_Participant(BaseModel):
  
         
 class Conversation_Base(BaseModel):
-    title: str = Field(..., max_length=100, description="Title of the conversation")
+    title: str | None = Field(None, max_length=100, description="Title of the conversation")
 
 class Conversation_Create(Conversation_Base):
-    is_group: bool = Field(..., description="Whether the conversation is a group conversation")
     pass
 
 class Conversation_Update(Conversation_Base):
@@ -245,6 +243,7 @@ class Conversation_Update(Conversation_Base):
 
 class Conversation(Conversation_Create):
     conversation_id: int = Field(..., description="Unique ID of the conversation")
+    is_group: bool = Field(..., description="Whether the conversation is a group conversation")
     created_at: int = Field(..., description="Timestamp of conversation creation")
     messages:list[Message] = Field(...)
     participants:list[Conversation_Participant]
