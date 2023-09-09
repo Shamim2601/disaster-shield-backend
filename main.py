@@ -184,9 +184,9 @@ async def update_user(user_id: int, user: schemas.User_Update, crnt_usr: Annotat
     db_user=user_repo.get_user_by_id(db,user_id)
     if not db_user:
         raise HTTPException(status_code=404,detail='user not found')
-    hashed_password=get_password_hash(user.password)
+    # hashed_password=get_password_hash(user.password)
     
-    return user_repo.update_user(db,user_id,hashed_password,user)
+    return user_repo.update_user(db,user_id,user)
 
 
 

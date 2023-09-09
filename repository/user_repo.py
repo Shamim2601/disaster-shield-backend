@@ -19,9 +19,9 @@ def create_user(db:Session,db_user:models.User):
     db.refresh(db_user)
     return db_user
 
-def update_user(db:Session,user_id:int,hashed_password:str,user:schemas.User_Update):
-    values=user.dict(exclude_unset=True,exclude=['password'])
-    values.update({'hashed_password':hashed_password})
+def update_user(db:Session,user_id:int,user:schemas.User_Update):
+    values=user.dict(exclude_unset=True)
+    # values.update({'hashed_password':hashed_password})
     db.query(models.User).filter(models.User.user_id==user_id) \
     .update(values,synchronize_session=False)
     db.commit()

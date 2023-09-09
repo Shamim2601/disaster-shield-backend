@@ -44,7 +44,7 @@ class User_Password(User_Base):
 class User_Create(User_Username,User_Password):
     pass
 
-class User_Update(User_Password):
+class User_Update(User_Base):
     pass
 
 class User_Out(User_Username):
