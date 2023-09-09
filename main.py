@@ -3,7 +3,7 @@ from typing import Annotated,Optional
 from fastapi import Depends, FastAPI, HTTPException,status
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from repository import user_repo,image_repo,post_repo, disaster_repo,missing_repo, messenger_repo
+from repository import user_repo,image_repo,post_repo, disaster_repo,missing_repo, messenger_repo,service_repo
 import uvicorn
 from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
@@ -660,7 +660,32 @@ async def get_weather_info(crnt_user:Annotated[models.User, Depends(get_current_
         raise HTTPException(status_code=404,detail='User does not have location set')
     return weather_service.get_current_weather(crnt_user.latitude,crnt_user.longitude)
 
+# Service CRUD
 
+@app.get('/services', tags=['Services'], summary="Get all services", response_model=list[schemas.Service])
+async def get_all_services(db: Session = Depends(get_db)):
+    return service_repo.get_all_services(db)
+
+@app.post('/services', tags=['Services'], summary="Create a new service", response_model=schemas.Service)
+async def create_service(service: schemas.Service_Create, crnt_user:Annotated[models.User,\
+    Depends(get_current_user)],db: Session = Depends(get_db)):
+    
+    if crnt_user.is_admin == False:
+        raise HTTPException(status_code=401, detail='Only admins can create services')
+    return service_repo.create_service(db, service)
+
+@app.put('/services/{service_id}', tags=['Services'], summary="Edit a service by ID", response_model=schemas.Service)
+async def edit_service(service_id: int, service: schemas.Service_Update, crnt_user:Annotated[models.User,\
+    Depends(get_current_user)],db: Session = Depends(get_db)):
+    
+    if crnt_user.is_admin == False:
+        raise HTTPException(status_code=401, detail='Only admins can edit services')
+    db_service = service_repo.get_service_by_service_id(db, service_id)
+    
+    if not db_service:
+        raise HTTPException(status_code=404, detail='Service not found')
+    
+    return service_repo.update_service(db, service_id, service)
 
 if __name__=="__main__":
     uvicorn.run("main:app",port=4001,reload=True,host="0.0.0.0")

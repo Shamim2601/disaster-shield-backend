@@ -185,5 +185,5 @@ class Service(Base):
     latitude = Column(Float(), nullable=False)
     longitude = Column(Float(), nullable=False)
     details = Column(String(500), nullable=True)
-    
+    contact_info = Column(String(500), nullable=True)
     

@@ -327,6 +327,7 @@ class Service_Base(BaseModel):
     latitude:float
     longitude:float
     details:str|None=Field(None,max_length=500)
+    contact_info:str|None=Field(None,max_length=500)
 
 class Service_Create(Service_Base):
     pass
