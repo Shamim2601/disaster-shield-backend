@@ -112,22 +112,22 @@ def search_sort_and_filter_posts(db:Session,search_query:str|None,sort_type:sche
                 post.post_id,post.title,post.post_content,tags,
                 post.creator.first_name,post.creator.last_name,post.creator.username))
         search_service.get_ranked_post(search_query,search_posts)
-        print(f'for query: "{search_query}".After search, result: is')
-        for s_post in search_posts:
-            # print("post id: ",s_post.post_id," score: ",s_post.score," title: "+s_post.title)
-            print(s_post)
+        # print(f'for query: "{search_query}".After search, result: is')
+        # for s_post in search_posts:
+        #     # print("post id: ",s_post.post_id," score: ",s_post.score," title: "+s_post.title)
+        #     print(s_post)
         # now discard from search_posts that have score 0 in search_posts
         search_posts = list(filter(lambda s_post: s_post.score > 0, search_posts))
-        print("After filtering out score 0 posts, result is")
-        for s_post in search_posts:
-            print(s_post)
+        # print("After filtering out score 0 posts, result is")
+        # for s_post in search_posts:
+        #     print(s_post)
         # now filter from posts that are in search_posts
         posts = list(filter(lambda post: post.post_id in list(map(lambda s_post: s_post.post_id, search_posts)), posts))
         # now sort search_posts by score
         search_posts.sort(key=lambda s_post: s_post.score, reverse=True)
-        print("After sorting search_posts, result is")
-        for s_post in search_posts:
-            print(s_post)
+        # print("After sorting search_posts, result is")
+        # for s_post in search_posts:
+        #     print(s_post)
         sorted_posts=[]
         for s_post in search_posts:
             sorted_posts.append(list(filter(lambda post: post.post_id == s_post.post_id, posts))[0])

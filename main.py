@@ -260,7 +260,7 @@ async def delete_post_image(post_id:int,image_id:Annotated[str,Query(...,max_len
     db.delete(db_image)
     db.commit()
 
-@app.post('/posts/{post_id}/enlist',tags=['Posts'], summary="enlist to the volunteership")
+@app.post('/posts/{post_id}/enlist',tags=['Posts'], summary="enlist to the volunteership",response_model=schemas.Post_Enlistment)
 async def enlist_to_post(post_id:int,current_user:Annotated[models.User,Depends(get_current_user)],\
     db:Session=Depends(get_db)):
     
@@ -273,7 +273,7 @@ async def enlist_to_post(post_id:int,current_user:Annotated[models.User,Depends(
         raise HTTPException(status_code=400,detail='already enlisted')
     return post_repo.add_post_enlistment(db,post_id,current_user.user_id)
 
-@app.delete('/posts/{post_id}/enlist', tags=['Posts'], summary="De-enlist from the volunteership")
+@app.delete('/posts/{post_id}/enlist', tags=['Posts'], summary="De-enlist from the volunteership",response_model=schemas.Post_Enlistment)
 async def de_enlist_from_post(post_id: int, current_user: models.User = Depends(get_current_user), 
                               db: Session = Depends(get_db)):
     db_post = post_repo.get_post_by_id(db, post_id)
@@ -286,6 +286,7 @@ async def de_enlist_from_post(post_id: int, current_user: models.User = Depends(
     
     db.delete(post_enlistment)
     db.commit()
+    return post_enlistment
  
 @app.post('/posts/{post_id}/tags', tags=['Posts'], summary="add tag to post", response_model=schemas.Post_Tag)
 async def add_tag_to_post(post_id: int, tag:Annotated[str,Query(...,max_length=20)],\
