@@ -338,7 +338,7 @@ async def get_post_reports(current_user: Annotated[models.User, Depends(get_curr
         raise HTTPException(status_code=403,detail='Unauthorized')
     return post_repo.get_all_post_reports(db)
 
-# TODO make upload File Optional
+# TODO make upload File Optionalif file.content_type
 @app.post('/posts/{post_id}/comment', tags=['Posts'], summary="Add a comment")#response_model=schemas.Post_Comment)
 async def add_comment_to_post(post_id: int, 
     current_user: Annotated[models.User, Depends(get_current_user)],file:UploadFile,\
@@ -469,8 +469,8 @@ async def upload_missing_person_image(
     if current_user.user_id != db_missing_person.creator_id:
         raise HTTPException(status_code=401, detail='Unauthorized')
     
-    if file.content_type != 'image/jpeg':
-        raise HTTPException(status_code=400, detail='Image Format Not Supported')
+    if not file.content_type in allowed_image_types:
+        raise HTTPException(status_code=400,detail='Image Format Not Supported')
     
     image: schemas.Image = image_service.uploadImage(file.file.read(), folder_name='/missing_persons')
     image_repo.add_image(image, db)
