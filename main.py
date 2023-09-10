@@ -204,6 +204,11 @@ async def create_post(post: schemas.Post_Create,user:Annotated[models.User,Depen
 async def list_posts(db: Session = Depends(get_db)):
     return post_repo.get_all_posts(db)
 
+@app.post('/posts/search',tags=['Posts'],summary="Get a list of posts by search",response_model=list[schemas.Post])
+async def search_posts(sort_type:Annotated[schemas.Sort_Type,Body(...)],\
+    db:Session=Depends(get_db),search_query:str|None=None):
+    return post_repo.search_sort_and_filter_posts(db,search_query,sort_type)
+
 @app.get('/posts/{post_id}', tags=['Posts'], summary="Get post by ID", response_model=schemas.Post)
 async def read_post(post_id: int, db: Session = Depends(get_db)):
     db_post=post_repo.get_post_by_id(db,post_id)
@@ -523,6 +528,25 @@ async def create_conversation(receiver_user_id:int,conversation: Annotated[schem
     
     # db.refresh(db_conversation)
     return db_conversation
+
+@app.get('/messages/conversations/binary/exists', tags=['Messages'],\
+    summary="Check if conversation between two already exists" , response_model=bool)
+async def check_binary_conversation_exists(receiver_user_id:int,\
+    crnt_user:Annotated[models.User, Depends(get_current_user)],db: Session = Depends(get_db)):
+    
+    if crnt_user.user_id == receiver_user_id:
+        raise HTTPException(status_code=400, detail='conversation with yourself cannot exist')
+    
+    receiver_user = user_repo.get_user_by_id(db,receiver_user_id)
+    if not receiver_user:
+        raise HTTPException(status_code=404, detail='Receiver user not found')
+    
+    existing_conversation =  messenger_repo.get_binary_conversation(db,crnt_user.user_id,receiver_user_id)
+    if existing_conversation != None:
+        return True
+    return False
+    
+
 
 @app.post('/messages/conversations/group', tags=['Messages'], summary="Create a Group conversation" , response_model=schemas.Conversation)
 async def create_conversation(conversation: Annotated[schemas.Conversation_Create,Body(...)],\

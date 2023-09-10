@@ -339,6 +339,11 @@ class Service(Service_Base):
     service_id:int
     
     class Config:
-        orm_mode=True    
+        orm_mode=True
+
+class Sort_Type(str,Enum):
+    newest = "newest",
+    oldest = "oldest",
+    volunteers = "volunteers"
     
     
