@@ -691,6 +691,10 @@ async def get_weather_info(crnt_user:Annotated[models.User, Depends(get_current_
 async def get_all_services(db: Session = Depends(get_db)):
     return service_repo.get_all_services(db)
 
+@app.get('/services/{service_id}',tags=['Services'],response_model=schemas.Service)
+async def get_service(service_id:int,db: Session = Depends(get_db)):
+    return service_repo.get_service_by_service_id(db,service_id)
+
 @app.post('/services', tags=['Services'], summary="Create a new service", response_model=schemas.Service)
 async def create_service(service: schemas.Service_Create, crnt_user:Annotated[models.User,\
     Depends(get_current_user)],db: Session = Depends(get_db)):
